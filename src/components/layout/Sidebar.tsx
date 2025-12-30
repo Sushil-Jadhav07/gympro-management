@@ -221,28 +221,42 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
 
           {/* User Section */}
           <div className={cn("border-t border-border/40 space-y-2 transition-all duration-300", isCollapsed ? "p-2" : "p-4")}>
-            <div className={cn(
-              "flex items-center rounded-lg hover:bg-accent transition-colors",
-              isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-2 py-2"
-            )}>
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                {user?.firstName?.[0]}{user?.lastName?.[0]}
-              </div>
-              <AnimatePresence>
-                {!isCollapsed && (
-                  <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 min-w-0 overflow-hidden"
-                  >
-                    <p className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/profile')}
+                  className={cn(
+                    "w-full flex items-center rounded-lg hover:bg-accent transition-colors cursor-pointer",
+                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-2 py-2"
+                  )}
+                >
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  </div>
+                  <AnimatePresence>
+                    {!isCollapsed && (
+                      <motion.div
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-1 min-w-0 overflow-hidden text-left"
+                      >
+                        <p className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  <p>View Profile</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
             
             <div className={cn("flex gap-2", isCollapsed && "flex-col")}>
               <Tooltip>

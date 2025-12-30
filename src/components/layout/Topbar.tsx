@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Bell, User, ChevronDown, X, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils';
 
 const Topbar: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [notifications] = useState(3); // Mock notification count
 
@@ -104,7 +106,7 @@ const Topbar: React.FC = () => {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
