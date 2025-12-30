@@ -1,0 +1,787 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Staff, UserRole, WorkSchedule } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Search, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  UserPlus, 
+  Calendar,
+  Phone,
+  Mail,
+  DollarSign,
+  Clock,
+  Award,
+  Users,
+  Sparkles
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+
+const StaffManagement: React.FC = () => {
+  const { hasRole } = useAuth();
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+
+  // Mock data
+  useEffect(() => {
+    const mockStaff: Staff[] = [
+      {
+        id: '3',
+        email: 'sarah.wilson@gym.com',
+        firstName: 'Sarah',
+        lastName: 'Wilson',
+        phone: '+1-555-0130',
+        role: UserRole.TRAINER,
+        createdAt: new Date('2023-01-15'),
+        updatedAt: new Date('2023-01-15'),
+        employeeId: 'EMP003',
+        position: 'Yoga Instructor',
+        department: 'Fitness',
+        hireDate: new Date('2023-01-15'),
+        salary: 45000,
+        schedule: [
+          { dayOfWeek: 1, startTime: '07:00', endTime: '12:00', isActive: true },
+          { dayOfWeek: 3, startTime: '07:00', endTime: '12:00', isActive: true },
+          { dayOfWeek: 5, startTime: '07:00', endTime: '12:00', isActive: true }
+        ],
+        certifications: ['RYT-200', 'Prenatal Yoga', 'Meditation Teacher'],
+        specializations: ['Hatha Yoga', 'Vinyasa', 'Restorative Yoga']
+      },
+      {
+        id: '4',
+        email: 'mike.johnson@gym.com',
+        firstName: 'Mike',
+        lastName: 'Johnson',
+        phone: '+1-555-0131',
+        role: UserRole.TRAINER,
+        createdAt: new Date('2023-03-01'),
+        updatedAt: new Date('2023-03-01'),
+        employeeId: 'EMP004',
+        position: 'Fitness Trainer',
+        department: 'Fitness',
+        hireDate: new Date('2023-03-01'),
+        salary: 50000,
+        schedule: [
+          { dayOfWeek: 2, startTime: '14:00', endTime: '22:00', isActive: true },
+          { dayOfWeek: 4, startTime: '14:00', endTime: '22:00', isActive: true },
+          { dayOfWeek: 6, startTime: '08:00', endTime: '16:00', isActive: true }
+        ],
+        certifications: ['NASM-CPT', 'HIIT Specialist', 'Nutrition Coach'],
+        specializations: ['HIIT', 'Strength Training', 'Weight Loss']
+      },
+      {
+        id: '5',
+        email: 'lisa.davis@gym.com',
+        firstName: 'Lisa',
+        lastName: 'Davis',
+        phone: '+1-555-0132',
+        role: UserRole.TRAINER,
+        createdAt: new Date('2022-11-01'),
+        updatedAt: new Date('2022-11-01'),
+        employeeId: 'EMP005',
+        position: 'Strength Coach',
+        department: 'Fitness',
+        hireDate: new Date('2022-11-01'),
+        salary: 55000,
+        schedule: [
+          { dayOfWeek: 1, startTime: '16:00', endTime: '21:00', isActive: true },
+          { dayOfWeek: 3, startTime: '16:00', endTime: '21:00', isActive: true },
+          { dayOfWeek: 5, startTime: '16:00', endTime: '21:00', isActive: true }
+        ],
+        certifications: ['CSCS', 'Powerlifting Coach', 'Olympic Lifting'],
+        specializations: ['Powerlifting', 'Olympic Lifting', 'Athletic Performance']
+      },
+      {
+        id: '6',
+        email: 'tom.brown@gym.com',
+        firstName: 'Tom',
+        lastName: 'Brown',
+        phone: '+1-555-0133',
+        role: UserRole.STAFF,
+        createdAt: new Date('2023-05-01'),
+        updatedAt: new Date('2023-05-01'),
+        employeeId: 'EMP006',
+        position: 'Front Desk Associate',
+        department: 'Operations',
+        hireDate: new Date('2023-05-01'),
+        salary: 35000,
+        schedule: [
+          { dayOfWeek: 1, startTime: '06:00', endTime: '14:00', isActive: true },
+          { dayOfWeek: 2, startTime: '06:00', endTime: '14:00', isActive: true },
+          { dayOfWeek: 3, startTime: '06:00', endTime: '14:00', isActive: true },
+          { dayOfWeek: 4, startTime: '06:00', endTime: '14:00', isActive: true },
+          { dayOfWeek: 5, startTime: '06:00', endTime: '14:00', isActive: true }
+        ],
+        certifications: ['Customer Service', 'CPR/AED'],
+        specializations: ['Member Relations', 'Payment Processing']
+      }
+    ];
+
+    setStaff(mockStaff);
+  }, []);
+
+  const getDepartmentColor = (department: string) => {
+    switch (department) {
+      case 'Fitness':
+        return 'bg-blue-500/10 text-blue-700 border-blue-200';
+      case 'Operations':
+        return 'bg-cyan-500/10 text-cyan-700 border-cyan-200';
+      case 'Management':
+        return 'bg-violet-500/10 text-violet-700 border-violet-200';
+      default:
+        return 'bg-gray-500/10 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getRoleColor = (role: UserRole) => {
+    switch (role) {
+      case UserRole.TRAINER:
+        return 'bg-blue-500/10 text-blue-700 border-blue-200';
+      case UserRole.STAFF:
+        return 'bg-indigo-500/10 text-indigo-700 border-indigo-200';
+      case UserRole.MANAGER:
+        return 'bg-violet-500/10 text-violet-700 border-violet-200';
+      default:
+        return 'bg-gray-500/10 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getDayName = (dayOfWeek: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayOfWeek];
+  };
+
+  const filteredStaff = staff.filter(member => {
+    const matchesSearch = 
+      member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesDepartment = selectedDepartment === 'all' || member.department === selectedDepartment;
+    
+    return matchesSearch && matchesDepartment;
+  });
+
+  const handleUpdateStaff = (updatedStaff: Staff) => {
+    setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+    setIsEditDialogOpen(false);
+    setEditingStaff(null);
+  };
+
+  const handleDeleteStaff = (staffId: string) => {
+    if (window.confirm('Are you sure you want to delete this staff member?')) {
+      setStaff(prev => prev.filter(s => s.id !== staffId));
+    }
+  };
+
+  const AddStaffForm = () => {
+    const [formData, setFormData] = useState({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      position: '',
+      department: '',
+      salary: '',
+      role: UserRole.STAFF
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      const newStaff: Staff = {
+        id: Date.now().toString(),
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        role: formData.role,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        employeeId: `EMP${String(Date.now()).slice(-3)}`,
+        position: formData.position,
+        department: formData.department,
+        hireDate: new Date(),
+        salary: parseFloat(formData.salary),
+        schedule: [],
+        certifications: [],
+        specializations: []
+      };
+
+      setStaff(prev => [...prev, newStaff]);
+      setIsAddDialogOpen(false);
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        position: '',
+        department: '',
+        salary: '',
+        role: UserRole.STAFF
+      });
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              value={formData.firstName}
+              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              value={formData.lastName}
+              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone</Label>
+          <Input
+            id="phone"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="position">Position</Label>
+            <Input
+              id="position"
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="department">Department</Label>
+            <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Fitness">Fitness</SelectItem>
+                <SelectItem value="Operations">Operations</SelectItem>
+                <SelectItem value="Management">Management</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="salary">Annual Salary</Label>
+            <Input
+              id="salary"
+              type="number"
+              value={formData.salary}
+              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UserRole.TRAINER}>Trainer</SelectItem>
+                <SelectItem value={UserRole.STAFF}>Staff</SelectItem>
+                <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="submit">Add Staff Member</Button>
+        </div>
+      </form>
+    );
+  };
+
+  const EditStaffForm = ({ staff: staffMember }: { staff: Staff }) => {
+    const [formData, setFormData] = useState({
+      firstName: staffMember.firstName,
+      lastName: staffMember.lastName,
+      email: staffMember.email,
+      phone: staffMember.phone,
+      position: staffMember.position,
+      department: staffMember.department,
+      salary: staffMember.salary.toString(),
+      role: staffMember.role
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      const updatedStaff: Staff = {
+        ...staffMember,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        position: formData.position,
+        department: formData.department,
+        salary: parseFloat(formData.salary),
+        role: formData.role,
+        updatedAt: new Date()
+      };
+
+      handleUpdateStaff(updatedStaff);
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-firstName">First Name</Label>
+            <Input
+              id="edit-firstName"
+              value={formData.firstName}
+              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-lastName">Last Name</Label>
+            <Input
+              id="edit-lastName"
+              value={formData.lastName}
+              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="edit-email">Email</Label>
+          <Input
+            id="edit-email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="edit-phone">Phone</Label>
+          <Input
+            id="edit-phone"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-position">Position</Label>
+            <Input
+              id="edit-position"
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-department">Department</Label>
+            <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Fitness">Fitness</SelectItem>
+                <SelectItem value="Operations">Operations</SelectItem>
+                <SelectItem value="Management">Management</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="edit-salary">Annual Salary</Label>
+            <Input
+              id="edit-salary"
+              type="number"
+              value={formData.salary}
+              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-role">Role</Label>
+            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UserRole.TRAINER}>Trainer</SelectItem>
+                <SelectItem value={UserRole.STAFF}>Staff</SelectItem>
+                <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4 border-t">
+          <Button type="button" variant="outline" onClick={() => {
+            setIsEditDialogOpen(false);
+            setEditingStaff(null);
+          }}>
+            Cancel
+          </Button>
+          <Button type="submit" className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700">
+            Update Staff Member
+          </Button>
+        </div>
+      </form>
+    );
+  };
+
+  const StaffDetailsDialog = ({ staff: staffMember }: { staff: Staff }) => (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <Avatar className="h-16 w-16">
+          <AvatarImage src={staffMember.avatar} />
+          <AvatarFallback>{staffMember.firstName[0]}{staffMember.lastName[0]}</AvatarFallback>
+        </Avatar>
+        <div>
+          <h3 className="text-lg font-semibold">{staffMember.firstName} {staffMember.lastName}</h3>
+          <p className="text-sm text-muted-foreground">Employee ID: {staffMember.employeeId}</p>
+          <div className="flex space-x-2 mt-2">
+            <Badge className={getRoleColor(staffMember.role)}>
+              {staffMember.role}
+            </Badge>
+            <Badge className={getDepartmentColor(staffMember.department)}>
+              {staffMember.department}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Contact Information</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center space-x-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span>{staffMember.email}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span>{staffMember.phone}</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-medium mb-2">Employment Details</h4>
+            <div className="space-y-2 text-sm">
+              <p><strong>Position:</strong> {staffMember.position}</p>
+              <p><strong>Department:</strong> {staffMember.department}</p>
+              <p><strong>Hire Date:</strong> {staffMember.hireDate.toLocaleDateString()}</p>
+              <p><strong>Salary:</strong> ${staffMember.salary.toLocaleString()}/year</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Schedule</h4>
+            <div className="space-y-1 text-sm">
+              {staffMember.schedule.filter(s => s.isActive).map((schedule, index) => (
+                <p key={index}>
+                  <strong>{getDayName(schedule.dayOfWeek)}:</strong> {schedule.startTime} - {schedule.endTime}
+                </p>
+              ))}
+            </div>
+          </div>
+
+          {staffMember.certifications && staffMember.certifications.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Certifications</h4>
+              <div className="flex flex-wrap gap-1">
+                {staffMember.certifications.map((cert, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {cert}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {staffMember.specializations && staffMember.specializations.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Specializations</h4>
+              <div className="flex flex-wrap gap-1">
+                {staffMember.specializations.map((spec, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {spec}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent flex items-center gap-2">
+            <Sparkles className="h-7 w-7 text-violet-600" />
+            Staff Management
+          </h2>
+          <p className="text-muted-foreground">Manage staff members, schedules, and payroll</p>
+        </div>
+        {hasRole(UserRole.MANAGER) && (
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button className="rounded-full h-11 px-6 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg shadow-violet-500/30">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Staff
+                </Button>
+              </motion.div>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl rounded-2xl border-0 shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-2xl">Add New Staff Member</DialogTitle>
+                <DialogDescription>
+                  Create a new staff account with employment details
+                </DialogDescription>
+              </DialogHeader>
+              <AddStaffForm />
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Staff', value: staff.length, icon: Users, gradient: 'from-violet-500 to-blue-500', delay: 0.1 },
+          { label: 'Trainers', value: staff.filter(s => s.role === UserRole.TRAINER).length, icon: UserPlus, gradient: 'from-blue-500 to-cyan-500', delay: 0.2 },
+          { label: 'Support Staff', value: staff.filter(s => s.role === UserRole.STAFF).length, icon: Award, gradient: 'from-indigo-500 to-blue-500', delay: 0.3 },
+          { label: 'Avg. Salary', value: `$${Math.round(staff.reduce((sum, s) => sum + s.salary, 0) / staff.length).toLocaleString()}`, icon: DollarSign, gradient: 'from-cyan-500 to-blue-500', delay: 0.4 },
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: stat.delay }}
+            whileHover={{ scale: 1.02, y: -4 }}
+            className="group relative overflow-hidden rounded-2xl bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 p-6 transition-all duration-300"
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
+            <div className="relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                  <stat.icon className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">{stat.label}</h3>
+              <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                {stat.value}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff Directory</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex space-x-4 mb-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search staff..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="Fitness">Fitness</SelectItem>
+                <SelectItem value="Operations">Operations</SelectItem>
+                <SelectItem value="Management">Management</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Staff Member</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Salary</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStaff.map((staffMember) => (
+                <TableRow key={staffMember.id}>
+                  <TableCell>
+                    <div className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarImage src={staffMember.avatar} />
+                        <AvatarFallback>{staffMember.firstName[0]}{staffMember.lastName[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{staffMember.firstName} {staffMember.lastName}</div>
+                        <div className="text-sm text-muted-foreground">{staffMember.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{staffMember.position}</TableCell>
+                  <TableCell>
+                    <Badge className={`${getDepartmentColor(staffMember.department)} border rounded-full px-3 py-1`}>
+                      {staffMember.department}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`${getRoleColor(staffMember.role)} border rounded-full px-3 py-1`}>
+                      {staffMember.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>${staffMember.salary.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedStaff(staffMember);
+                          setIsViewDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {hasRole(UserRole.MANAGER) && (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setEditingStaff(staffMember);
+                              setIsEditDialogOpen(true);
+                            }}
+                            className="hover:bg-blue-100"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteStaff(staffMember.id)}
+                            className="hover:bg-blue-100 hover:text-blue-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Staff Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-3xl rounded-2xl border-0 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Staff Details</DialogTitle>
+          </DialogHeader>
+          {selectedStaff && <StaffDetailsDialog staff={selectedStaff} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Staff Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open);
+        if (!open) setEditingStaff(null);
+      }}>
+        <DialogContent className="max-w-2xl rounded-2xl border-0 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Edit Staff Member</DialogTitle>
+            <DialogDescription>
+              Update staff member information
+            </DialogDescription>
+          </DialogHeader>
+          {editingStaff && <EditStaffForm staff={editingStaff} />}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default StaffManagement;
