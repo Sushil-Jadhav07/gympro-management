@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import BulkUploadModal from './BulkUploadModal';
+import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const MemberManagement: React.FC = () => {
   const { hasRole } = useAuth();
@@ -40,96 +42,80 @@ const MemberManagement: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data
+  // Helper function to convert Supabase member to Member interface
+  const mapSupabaseMemberToMember = (dbMember: any): Member => {
+    // Height is stored in cm in Supabase
+    let height = dbMember.height ? parseFloat(dbMember.height) : undefined;
+    let heightUnit: 'cm' | 'ft' = 'cm';
+    let heightFeet: number | undefined;
+    let heightInches: number | undefined;
+
+    if (height) {
+      // Height is always in cm in database, convert to feet if needed for display
+      // For now, we'll keep it in cm, but you can add conversion logic here if needed
+      heightUnit = 'cm';
+    }
+
+    // Convert weight - assume stored value is in kg
+    let weightUnit: 'kg' | 'lbs' = 'kg';
+    const weight = dbMember.weight ? parseFloat(dbMember.weight) : undefined;
+
+    return {
+      id: dbMember.id,
+      email: dbMember.email,
+      firstName: dbMember.first_name,
+      lastName: dbMember.last_name,
+      phone: dbMember.phone || '',
+      dateOfBirth: dbMember.dob ? new Date(dbMember.dob) : new Date(),
+      weight,
+      weightUnit,
+      height,
+      heightUnit,
+      heightFeet,
+      heightInches,
+      membershipType: dbMember.membership_type as 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit',
+      membershipStartDate: new Date(),
+      membershipEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      isActive: dbMember.status === 'ACTIVE',
+      role: UserRole.MEMBER,
+      createdAt: new Date(dbMember.created_at),
+      updatedAt: new Date(dbMember.updated_at),
+      fitnessGoals: [],
+      medicalConditions: []
+    };
+  };
+
+  // Fetch members from Supabase
   useEffect(() => {
-    const mockMembers: Member[] = [
-      {
-        id: '1',
-        email: 'john.doe@email.com',
-        firstName: 'John',
-        lastName: 'Doe',
-        phone: '+1-555-0101',
-        dateOfBirth: new Date('1990-05-15'),
-        address: '123 Main St, City, State 12345',
-        weight: 75,
-        weightUnit: 'kg',
-        height: 180,
-        heightUnit: 'cm',
-        emergencyContact: {
-          name: 'Jane Doe',
-          phone: '+1-555-0102',
-          relationship: 'Spouse'
-        },
-        membershipType: 'Gym + Cardio',
-        membershipStartDate: new Date('2024-01-01'),
-        membershipEndDate: new Date('2024-12-31'),
-        isActive: true,
-        role: UserRole.MEMBER,
-        createdAt: new Date('2024-01-01'),
-        updatedAt: new Date('2024-01-01'),
-        fitnessGoals: ['Weight Loss', 'Muscle Building'],
-        medicalConditions: ['None']
-      },
-      {
-        id: '2',
-        email: 'sarah.smith@email.com',
-        firstName: 'Sarah',
-        lastName: 'Smith',
-        phone: '+1-555-0103',
-        dateOfBirth: new Date('1985-08-22'),
-        address: '456 Oak Ave, City, State 12345',
-        weight: 140,
-        weightUnit: 'lbs',
-        height: 5,
-        heightUnit: 'ft',
-        heightFeet: 5,
-        heightInches: 6,
-        emergencyContact: {
-          name: 'Mike Smith',
-          phone: '+1-555-0104',
-          relationship: 'Husband'
-        },
-        membershipType: 'Gym',
-        membershipStartDate: new Date('2024-01-15'),
-        membershipEndDate: new Date('2024-12-15'),
-        isActive: true,
-        role: UserRole.MEMBER,
-        createdAt: new Date('2024-01-15'),
-        updatedAt: new Date('2024-01-15'),
-        fitnessGoals: ['General Fitness', 'Flexibility'],
-        medicalConditions: ['Knee Injury (Previous)']
-      },
-      {
-        id: '3',
-        email: 'mike.johnson@email.com',
-        firstName: 'Mike',
-        lastName: 'Johnson',
-        phone: '+1-555-0105',
-        dateOfBirth: new Date('1992-03-10'),
-        address: '789 Pine St, City, State 12345',
-        weight: 85,
-        weightUnit: 'kg',
-        height: 185,
-        heightUnit: 'cm',
-        emergencyContact: {
-          name: 'Lisa Johnson',
-          phone: '+1-555-0106',
-          relationship: 'Sister'
-        },
-        membershipType: 'Gym + Cardio + Crossfit',
-        membershipStartDate: new Date('2023-12-01'),
-        membershipEndDate: new Date('2024-11-30'),
-        isActive: true,
-        role: UserRole.MEMBER,
-        createdAt: new Date('2023-12-01'),
-        updatedAt: new Date('2023-12-01'),
-        fitnessGoals: ['Strength Training', 'Athletic Performance'],
-        medicalConditions: ['None']
-      }
-    ];
+    const fetchMembers = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('members')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-    setMembers(mockMembers);
+        if (error) {
+          console.error('Error fetching members:', error);
+          toast.error('Failed to load members');
+          return;
+        }
+
+        if (data) {
+          const mappedMembers = data.map(mapSupabaseMemberToMember);
+          setMembers(mappedMembers);
+        }
+      } catch (error) {
+        console.error('Error fetching members:', error);
+        toast.error('Failed to load members');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMembers();
   }, []);
 
   const getMembershipColor = (membership: string) => {
@@ -184,15 +170,70 @@ const MemberManagement: React.FC = () => {
     setMembers(prev => [...newMembers, ...prev]);
   };
 
-  const handleUpdateMember = (updatedMember: Member) => {
-    setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
-    setIsEditDialogOpen(false);
-    setEditingMember(null);
+  const handleUpdateMember = async (updatedMember: Member) => {
+    try {
+      // Convert height to cm if needed
+      let heightInCm = updatedMember.height;
+      if (updatedMember.heightUnit === 'ft' && updatedMember.heightFeet) {
+        const totalInches = (updatedMember.heightFeet * 12) + (updatedMember.heightInches || 0);
+        heightInCm = totalInches * 2.54;
+      }
+
+      const { error } = await supabase
+        .from('members')
+        .update({
+          first_name: updatedMember.firstName,
+          last_name: updatedMember.lastName,
+          email: updatedMember.email,
+          phone: updatedMember.phone || null,
+          dob: updatedMember.dateOfBirth.toISOString().split('T')[0],
+          weight: updatedMember.weight ? updatedMember.weight.toString() : null,
+          height: heightInCm ? heightInCm.toString() : null,
+          membership_type: updatedMember.membershipType,
+          plan_price: getMembershipPrice(updatedMember.membershipType).toString(),
+          status: updatedMember.isActive ? 'ACTIVE' : 'INACTIVE',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', updatedMember.id);
+
+      if (error) {
+        console.error('Error updating member:', error);
+        toast.error('Failed to update member');
+        return;
+      }
+
+      setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+      setIsEditDialogOpen(false);
+      setEditingMember(null);
+      toast.success('Member updated successfully');
+    } catch (error) {
+      console.error('Error updating member:', error);
+      toast.error('Failed to update member');
+    }
   };
 
-  const handleDeleteMember = (memberId: string) => {
-    if (window.confirm('Are you sure you want to delete this member?')) {
+  const handleDeleteMember = async (memberId: string) => {
+    if (!window.confirm('Are you sure you want to delete this member?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('members')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) {
+        console.error('Error deleting member:', error);
+        toast.error('Failed to delete member');
+        return;
+      }
+
       setMembers(prev => prev.filter(m => m.id !== memberId));
+      toast.success('Member deleted successfully');
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      toast.error('Failed to delete member');
     }
   };
 
@@ -219,64 +260,79 @@ const MemberManagement: React.FC = () => {
       notes: ''
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       
-      const newMember: Member = {
-        id: Date.now().toString(),
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        dateOfBirth: new Date(formData.dateOfBirth),
-        address: formData.address,
-        weight: parseFloat(formData.weight),
-        weightUnit: formData.weightUnit,
-        height: formData.heightUnit === 'cm' ? parseFloat(formData.height) : parseFloat(formData.heightFeet),
-        heightUnit: formData.heightUnit,
-        heightFeet: formData.heightUnit === 'ft' ? parseFloat(formData.heightFeet) : undefined,
-        heightInches: formData.heightUnit === 'ft' ? parseFloat(formData.heightInches) : undefined,
-        emergencyContact: {
-          name: formData.emergencyContactName,
-          phone: formData.emergencyContactPhone,
-          relationship: formData.emergencyContactRelationship
-        },
-        membershipType: formData.membershipType,
-        membershipStartDate: new Date(),
-        membershipEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        isActive: true,
-        role: UserRole.MEMBER,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        fitnessGoals: formData.fitnessGoals.split(',').map(goal => goal.trim()).filter(goal => goal),
-        medicalConditions: formData.medicalConditions.split(',').map(condition => condition.trim()).filter(condition => condition),
-        notes: formData.notes
-      };
+      try {
+        // Convert height to cm for storage
+        let heightInCm: number | null = null;
+        if (formData.heightUnit === 'cm' && formData.height) {
+          heightInCm = parseFloat(formData.height);
+        } else if (formData.heightUnit === 'ft' && formData.heightFeet) {
+          const totalInches = (parseFloat(formData.heightFeet) * 12) + (parseFloat(formData.heightInches || '0'));
+          heightInCm = totalInches * 2.54;
+        }
 
-      setMembers(prev => [newMember, ...prev]);
-      setIsAddDialogOpen(false);
-      // Reset form
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        dateOfBirth: '',
-        address: '',
-        weight: '',
-        weightUnit: 'kg',
-        height: '',
-        heightUnit: 'cm',
-        heightFeet: '',
-        heightInches: '',
-        membershipType: 'Gym',
-        emergencyContactName: '',
-        emergencyContactPhone: '',
-        emergencyContactRelationship: '',
-        medicalConditions: '',
-        fitnessGoals: '',
-        notes: ''
-      });
+        // Convert weight to numeric
+        const weightValue = formData.weight ? parseFloat(formData.weight) : null;
+
+        // Insert into Supabase
+        const { data, error } = await supabase
+          .from('members')
+          .insert({
+            gym_id: DEFAULT_GYM_ID,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            phone: formData.phone || null,
+            dob: formData.dateOfBirth || null,
+            weight: weightValue ? weightValue.toString() : null,
+            height: heightInCm ? heightInCm.toString() : null,
+            membership_type: formData.membershipType,
+            plan_price: getMembershipPrice(formData.membershipType).toString(),
+            status: 'ACTIVE'
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating member:', error);
+          toast.error(error.message || 'Failed to create member');
+          return;
+        }
+
+        // Map the created member to the Member interface
+        const newMember = mapSupabaseMemberToMember(data);
+        setMembers(prev => [newMember, ...prev]);
+        setIsAddDialogOpen(false);
+        toast.success('Member added successfully');
+        
+        // Reset form
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          dateOfBirth: '',
+          address: '',
+          weight: '',
+          weightUnit: 'kg',
+          height: '',
+          heightUnit: 'cm',
+          heightFeet: '',
+          heightInches: '',
+          membershipType: 'Gym',
+          emergencyContactName: '',
+          emergencyContactPhone: '',
+          emergencyContactRelationship: '',
+          medicalConditions: '',
+          fitnessGoals: '',
+          notes: ''
+        });
+      } catch (error) {
+        console.error('Error creating member:', error);
+        toast.error('Failed to create member');
+      }
     };
 
     return (
@@ -993,7 +1049,23 @@ const MemberManagement: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMembers.map((member, index) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
+                        <span className="ml-3 text-muted-foreground">Loading members...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredMembers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No members found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredMembers.map((member, index) => (
                   <motion.tr
                     key={member.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -1084,7 +1156,8 @@ const MemberManagement: React.FC = () => {
                       </div>
                     </TableCell>
                   </motion.tr>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

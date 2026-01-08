@@ -28,6 +28,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const StaffManagement: React.FC = () => {
   const { hasRole } = useAuth();
@@ -39,103 +41,59 @@ const StaffManagement: React.FC = () => {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data
+  // Helper function to convert Supabase staff to Staff interface
+  const mapSupabaseStaffToStaff = (dbStaff: any): Staff => {
+    return {
+      id: dbStaff.id,
+      email: dbStaff.email,
+      firstName: dbStaff.first_name,
+      lastName: dbStaff.last_name,
+      phone: dbStaff.phone || '',
+      role: dbStaff.role as UserRole,
+      createdAt: new Date(dbStaff.created_at),
+      updatedAt: new Date(dbStaff.updated_at),
+      employeeId: dbStaff.employee_id || '',
+      position: dbStaff.position,
+      department: dbStaff.department,
+      hireDate: dbStaff.hire_date ? new Date(dbStaff.hire_date) : new Date(),
+      salary: dbStaff.salary ? parseFloat(dbStaff.salary) : 0,
+      schedule: [], // Schedule not stored in staff table
+      certifications: dbStaff.certifications || [],
+      specializations: dbStaff.specializations || []
+    };
+  };
+
+  // Fetch staff from Supabase
   useEffect(() => {
-    const mockStaff: Staff[] = [
-      {
-        id: '3',
-        email: 'sarah.wilson@gym.com',
-        firstName: 'Sarah',
-        lastName: 'Wilson',
-        phone: '+1-555-0130',
-        role: UserRole.TRAINER,
-        createdAt: new Date('2023-01-15'),
-        updatedAt: new Date('2023-01-15'),
-        employeeId: 'EMP003',
-        position: 'Yoga Instructor',
-        department: 'Fitness',
-        hireDate: new Date('2023-01-15'),
-        salary: 45000,
-        schedule: [
-          { dayOfWeek: 1, startTime: '07:00', endTime: '12:00', isActive: true },
-          { dayOfWeek: 3, startTime: '07:00', endTime: '12:00', isActive: true },
-          { dayOfWeek: 5, startTime: '07:00', endTime: '12:00', isActive: true }
-        ],
-        certifications: ['RYT-200', 'Prenatal Yoga', 'Meditation Teacher'],
-        specializations: ['Hatha Yoga', 'Vinyasa', 'Restorative Yoga']
-      },
-      {
-        id: '4',
-        email: 'mike.johnson@gym.com',
-        firstName: 'Mike',
-        lastName: 'Johnson',
-        phone: '+1-555-0131',
-        role: UserRole.TRAINER,
-        createdAt: new Date('2023-03-01'),
-        updatedAt: new Date('2023-03-01'),
-        employeeId: 'EMP004',
-        position: 'Fitness Trainer',
-        department: 'Fitness',
-        hireDate: new Date('2023-03-01'),
-        salary: 50000,
-        schedule: [
-          { dayOfWeek: 2, startTime: '14:00', endTime: '22:00', isActive: true },
-          { dayOfWeek: 4, startTime: '14:00', endTime: '22:00', isActive: true },
-          { dayOfWeek: 6, startTime: '08:00', endTime: '16:00', isActive: true }
-        ],
-        certifications: ['NASM-CPT', 'HIIT Specialist', 'Nutrition Coach'],
-        specializations: ['HIIT', 'Strength Training', 'Weight Loss']
-      },
-      {
-        id: '5',
-        email: 'lisa.davis@gym.com',
-        firstName: 'Lisa',
-        lastName: 'Davis',
-        phone: '+1-555-0132',
-        role: UserRole.TRAINER,
-        createdAt: new Date('2022-11-01'),
-        updatedAt: new Date('2022-11-01'),
-        employeeId: 'EMP005',
-        position: 'Strength Coach',
-        department: 'Fitness',
-        hireDate: new Date('2022-11-01'),
-        salary: 55000,
-        schedule: [
-          { dayOfWeek: 1, startTime: '16:00', endTime: '21:00', isActive: true },
-          { dayOfWeek: 3, startTime: '16:00', endTime: '21:00', isActive: true },
-          { dayOfWeek: 5, startTime: '16:00', endTime: '21:00', isActive: true }
-        ],
-        certifications: ['CSCS', 'Powerlifting Coach', 'Olympic Lifting'],
-        specializations: ['Powerlifting', 'Olympic Lifting', 'Athletic Performance']
-      },
-      {
-        id: '6',
-        email: 'tom.brown@gym.com',
-        firstName: 'Tom',
-        lastName: 'Brown',
-        phone: '+1-555-0133',
-        role: UserRole.STAFF,
-        createdAt: new Date('2023-05-01'),
-        updatedAt: new Date('2023-05-01'),
-        employeeId: 'EMP006',
-        position: 'Front Desk Associate',
-        department: 'Operations',
-        hireDate: new Date('2023-05-01'),
-        salary: 35000,
-        schedule: [
-          { dayOfWeek: 1, startTime: '06:00', endTime: '14:00', isActive: true },
-          { dayOfWeek: 2, startTime: '06:00', endTime: '14:00', isActive: true },
-          { dayOfWeek: 3, startTime: '06:00', endTime: '14:00', isActive: true },
-          { dayOfWeek: 4, startTime: '06:00', endTime: '14:00', isActive: true },
-          { dayOfWeek: 5, startTime: '06:00', endTime: '14:00', isActive: true }
-        ],
-        certifications: ['Customer Service', 'CPR/AED'],
-        specializations: ['Member Relations', 'Payment Processing']
-      }
-    ];
+    const fetchStaff = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase
+          .from('staff')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-    setStaff(mockStaff);
+        if (error) {
+          console.error('Error fetching staff:', error);
+          toast.error('Failed to load staff');
+          return;
+        }
+
+        if (data) {
+          const mappedStaff = data.map(mapSupabaseStaffToStaff);
+          setStaff(mappedStaff);
+        }
+      } catch (error) {
+        console.error('Error fetching staff:', error);
+        toast.error('Failed to load staff');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStaff();
   }, []);
 
   const getDepartmentColor = (department: string) => {
@@ -181,15 +139,64 @@ const StaffManagement: React.FC = () => {
     return matchesSearch && matchesDepartment;
   });
 
-  const handleUpdateStaff = (updatedStaff: Staff) => {
-    setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
-    setIsEditDialogOpen(false);
-    setEditingStaff(null);
+  const handleUpdateStaff = async (updatedStaff: Staff) => {
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .update({
+          first_name: updatedStaff.firstName,
+          last_name: updatedStaff.lastName,
+          email: updatedStaff.email,
+          phone: updatedStaff.phone || null,
+          position: updatedStaff.position,
+          department: updatedStaff.department,
+          role: updatedStaff.role,
+          salary: updatedStaff.salary.toString(),
+          hire_date: updatedStaff.hireDate.toISOString().split('T')[0],
+          certifications: updatedStaff.certifications || [],
+          specializations: updatedStaff.specializations || [],
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', updatedStaff.id);
+
+      if (error) {
+        console.error('Error updating staff:', error);
+        toast.error('Failed to update staff member');
+        return;
+      }
+
+      setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+      setIsEditDialogOpen(false);
+      setEditingStaff(null);
+      toast.success('Staff member updated successfully');
+    } catch (error) {
+      console.error('Error updating staff:', error);
+      toast.error('Failed to update staff member');
+    }
   };
 
-  const handleDeleteStaff = (staffId: string) => {
-    if (window.confirm('Are you sure you want to delete this staff member?')) {
+  const handleDeleteStaff = async (staffId: string) => {
+    if (!window.confirm('Are you sure you want to delete this staff member?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .delete()
+        .eq('id', staffId);
+
+      if (error) {
+        console.error('Error deleting staff:', error);
+        toast.error('Failed to delete staff member');
+        return;
+      }
+
       setStaff(prev => prev.filter(s => s.id !== staffId));
+      toast.success('Staff member deleted successfully');
+    } catch (error) {
+      console.error('Error deleting staff:', error);
+      toast.error('Failed to delete staff member');
     }
   };
 
@@ -205,40 +212,57 @@ const StaffManagement: React.FC = () => {
       role: UserRole.STAFF
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       
-      const newStaff: Staff = {
-        id: Date.now().toString(),
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        role: formData.role,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        employeeId: `EMP${String(Date.now()).slice(-3)}`,
-        position: formData.position,
-        department: formData.department,
-        hireDate: new Date(),
-        salary: parseFloat(formData.salary),
-        schedule: [],
-        certifications: [],
-        specializations: []
-      };
+      try {
+        const employeeId = `EMP${String(Date.now()).slice(-3)}`;
+        
+        const { data, error } = await supabase
+          .from('staff')
+          .insert({
+            gym_id: DEFAULT_GYM_ID,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            phone: formData.phone || null,
+            employee_id: employeeId,
+            position: formData.position,
+            department: formData.department,
+            role: formData.role,
+            salary: parseFloat(formData.salary).toString(),
+            hire_date: new Date().toISOString().split('T')[0],
+            certifications: [],
+            specializations: []
+          })
+          .select()
+          .single();
 
-      setStaff(prev => [...prev, newStaff]);
-      setIsAddDialogOpen(false);
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        position: '',
-        department: '',
-        salary: '',
-        role: UserRole.STAFF
-      });
+        if (error) {
+          console.error('Error creating staff:', error);
+          toast.error(error.message || 'Failed to create staff member');
+          return;
+        }
+
+        const newStaff = mapSupabaseStaffToStaff(data);
+        setStaff(prev => [newStaff, ...prev]);
+        setIsAddDialogOpen(false);
+        toast.success('Staff member added successfully');
+        
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          position: '',
+          department: '',
+          salary: '',
+          role: UserRole.STAFF
+        });
+      } catch (error) {
+        console.error('Error creating staff:', error);
+        toast.error('Failed to create staff member');
+      }
     };
 
     return (
