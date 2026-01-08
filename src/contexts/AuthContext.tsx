@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, UserRole } from '@/types';
 import { AuthService, mockUsers } from '@/lib/auth';
 import api from '@/lib/api';
+import { supabase } from '@/lib/supabase';
+import { verifyPassword } from '@/lib/auth-utils';
 
 interface AuthContextType {
   user: User | null;
@@ -37,25 +39,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const token = AuthService.getToken();
         const savedUser = AuthService.getUser();
 
-        if (token && savedUser && !AuthService.isTokenExpired(token)) {
-          setUser(savedUser);
-        } else if (token && AuthService.isTokenExpired(token)) {
-          // Try to refresh token
-          try {
-            const response = await api.refreshToken();
-            if (response.success && response.data) {
-              AuthService.setToken(response.data.token);
+        // If we have both token and user, restore the session
+        if (token && savedUser) {
+          // Check if token is a simple string token (our format) or JWT
+          const isSimpleToken = !token.includes('.') || token.startsWith('supabase-jwt-token-');
+          
+          if (isSimpleToken) {
+            // For simple tokens, just restore the user (no expiration check)
+            setUser(savedUser);
+          } else {
+            // For JWT tokens, check expiration
+            if (!AuthService.isTokenExpired(token)) {
               setUser(savedUser);
             } else {
-              AuthService.logout();
+              // Try to refresh token
+              try {
+                const response = await api.refreshToken();
+                if (response.success && response.data) {
+                  AuthService.setToken(response.data.token);
+                  setUser(savedUser);
+                } else {
+                  AuthService.logout();
+                }
+              } catch (error) {
+                AuthService.logout();
+              }
             }
-          } catch (error) {
-            AuthService.logout();
           }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        AuthService.removeToken();
+        // Don't clear auth on error, just log it
       } finally {
         setIsLoading(false);
       }
@@ -64,31 +78,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (emailOrPhone: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
-      // For demo purposes, use mock authentication
-      // In production, this would make an API call
-      const mockUser = Object.values(mockUsers).find(u => u.email === email);
-      
-      if (mockUser && password === 'password') {
-        const mockToken = 'mock-jwt-token-' + Date.now();
-        AuthService.setToken(mockToken);
-        AuthService.setUser(mockUser);
-        setUser(mockUser);
-      } else {
-        throw new Error('Invalid credentials');
+      if (!emailOrPhone || !password) {
+        throw new Error('Email/phone and password are required');
       }
 
-      // Uncomment for real API integration:
-      // const response = await api.login(email, password);
-      // if (response.success && response.data) {
-      //   AuthService.setToken(response.data.token);
-      //   AuthService.setUser(response.data.user);
-      //   setUser(response.data.user);
-      // } else {
-      //   throw new Error(response.message || 'Login failed');
-      // }
+      // Check if input is email or phone
+      const isEmail = emailOrPhone.includes('@');
+      
+      // Query user from Supabase
+      let query = supabase.from('users').select('*');
+      
+      if (isEmail) {
+        query = query.eq('email', emailOrPhone.toLowerCase().trim());
+      } else {
+        query = query.eq('phone_number', emailOrPhone.trim());
+      }
+      
+      const { data, error } = await query.single();
+      
+      if (error) {
+        console.error('Supabase query error:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // If user not found, return generic error for security
+        if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          throw new Error('Invalid email/phone or password');
+        }
+        
+        // Handle RLS policy errors
+        if (error.code === '42501' || error.message?.includes('permission denied')) {
+          throw new Error('Access denied. Please contact administrator.');
+        }
+        
+        throw new Error(error.message || 'Login failed. Please try again.');
+      }
+      
+      if (!data) {
+        throw new Error('Invalid email/phone or password');
+      }
+      
+      // Check if user is active
+      if (!data.is_active) {
+        throw new Error('Account is deactivated. Please contact administrator.');
+      }
+      
+      // Verify password
+      const isValidPassword = await verifyPassword(password, data.password_hash);
+      
+      if (!isValidPassword) {
+        throw new Error('Invalid email/phone or password');
+      }
+      
+      // Map database user to User interface
+      const user: User = {
+        id: data.id,
+        email: data.email,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        phone: data.phone_number || undefined,
+        role: data.role.toUpperCase() as UserRole,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      // Store user in localStorage
+      const mockToken = 'supabase-jwt-token-' + Date.now();
+      AuthService.setToken(mockToken);
+      AuthService.setUser(user);
+      setUser(user);
     } catch (error) {
       console.error('Login error:', error);
       throw error;

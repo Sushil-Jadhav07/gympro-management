@@ -33,7 +33,15 @@ export class AuthService {
     if (!userStr) return null;
     
     try {
-      return JSON.parse(userStr);
+      const user = JSON.parse(userStr);
+      // Convert date strings back to Date objects
+      if (user.createdAt) {
+        user.createdAt = new Date(user.createdAt);
+      }
+      if (user.updatedAt) {
+        user.updatedAt = new Date(user.updatedAt);
+      }
+      return user;
     } catch {
       return null;
     }
