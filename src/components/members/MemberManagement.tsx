@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Member, UserRole } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,10 @@ import {
   Phone,
   MapPin,
   Calendar,
-  CreditCard
+  CreditCard,
+  Activity,
+  ShieldAlert,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import BulkUploadModal from './BulkUploadModal';
@@ -32,11 +36,11 @@ import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 const MemberManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { hasRole } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMembership, setSelectedMembership] = useState<string>('all');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -45,21 +49,34 @@ const MemberManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to convert Supabase member to Member interface
-  const mapSupabaseMemberToMember = (dbMember: any): Member => {
+  type DbMember = {
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone?: string | null;
+    dob?: string | null;
+    weight?: string | null;
+    height?: string | null;
+    membership_type: 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit';
+    status: 'ACTIVE' | 'INACTIVE';
+    created_at: string;
+    updated_at: string;
+  };
+  const mapSupabaseMemberToMember = (dbMember: DbMember): Member => {
     // Height is stored in cm in Supabase
-    let height = dbMember.height ? parseFloat(dbMember.height) : undefined;
-    let heightUnit: 'cm' | 'ft' = 'cm';
+    const height = dbMember.height ? parseFloat(dbMember.height) : undefined;
+    const heightUnit: 'cm' | 'ft' = 'cm';
     let heightFeet: number | undefined;
     let heightInches: number | undefined;
 
     if (height) {
       // Height is always in cm in database, convert to feet if needed for display
       // For now, we'll keep it in cm, but you can add conversion logic here if needed
-      heightUnit = 'cm';
     }
 
     // Convert weight - assume stored value is in kg
-    let weightUnit: 'kg' | 'lbs' = 'kg';
+    const weightUnit: 'kg' | 'lbs' = 'kg';
     const weight = dbMember.weight ? parseFloat(dbMember.weight) : undefined;
 
     return {
@@ -237,258 +254,7 @@ const MemberManagement: React.FC = () => {
     }
   };
 
-  const AddMemberForm = () => {
-    const [formData, setFormData] = useState({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      address: '',
-      weight: '',
-      weightUnit: 'kg' as 'kg' | 'lbs',
-      height: '',
-      heightUnit: 'cm' as 'cm' | 'ft',
-      heightFeet: '',
-      heightInches: '',
-      membershipType: 'Gym' as 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit',
-      emergencyContactName: '',
-      emergencyContactPhone: '',
-      emergencyContactRelationship: '',
-      medicalConditions: '',
-      fitnessGoals: '',
-      notes: ''
-    });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      try {
-        // Convert height to cm for storage
-        let heightInCm: number | null = null;
-        if (formData.heightUnit === 'cm' && formData.height) {
-          heightInCm = parseFloat(formData.height);
-        } else if (formData.heightUnit === 'ft' && formData.heightFeet) {
-          const totalInches = (parseFloat(formData.heightFeet) * 12) + (parseFloat(formData.heightInches || '0'));
-          heightInCm = totalInches * 2.54;
-        }
-
-        // Convert weight to numeric
-        const weightValue = formData.weight ? parseFloat(formData.weight) : null;
-
-        // Insert into Supabase
-        const { data, error } = await supabase
-          .from('members')
-          .insert({
-            gym_id: DEFAULT_GYM_ID,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            phone: formData.phone || null,
-            dob: formData.dateOfBirth || null,
-            weight: weightValue ? weightValue.toString() : null,
-            height: heightInCm ? heightInCm.toString() : null,
-            membership_type: formData.membershipType,
-            plan_price: getMembershipPrice(formData.membershipType).toString(),
-            status: 'ACTIVE'
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating member:', error);
-          toast.error(error.message || 'Failed to create member');
-          return;
-        }
-
-        // Map the created member to the Member interface
-        const newMember = mapSupabaseMemberToMember(data);
-        setMembers(prev => [newMember, ...prev]);
-        setIsAddDialogOpen(false);
-        toast.success('Member added successfully');
-        
-        // Reset form
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          dateOfBirth: '',
-          address: '',
-          weight: '',
-          weightUnit: 'kg',
-          height: '',
-          heightUnit: 'cm',
-          heightFeet: '',
-          heightInches: '',
-          membershipType: 'Gym',
-          emergencyContactName: '',
-          emergencyContactPhone: '',
-          emergencyContactRelationship: '',
-          medicalConditions: '',
-          fitnessGoals: '',
-          notes: ''
-        });
-      } catch (error) {
-        console.error('Error creating member:', error);
-        toast.error('Failed to create member');
-      }
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Personal Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Physical Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="weight">Weight</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="weight"
-                  type="number"
-                  step="0.1"
-                  value={formData.weight}
-                  onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                  placeholder="70"
-                />
-                <Select value={formData.weightUnit} onValueChange={(value) => setFormData({ ...formData, weightUnit: value as 'kg' | 'lbs' })}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kg">kg</SelectItem>
-                    <SelectItem value="lbs">lbs</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="height">Height</Label>
-              <div className="flex space-x-2">
-                {formData.heightUnit === 'cm' ? (
-                  <Input
-                    id="height"
-                    type="number"
-                    value={formData.height}
-                    onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                    placeholder="175"
-                  />
-                ) : (
-                  <>
-                    <Input
-                      id="heightFeet"
-                      type="number"
-                      value={formData.heightFeet}
-                      onChange={(e) => setFormData({ ...formData, heightFeet: e.target.value })}
-                      placeholder="5"
-                      className="w-16"
-                    />
-                    <span className="self-center">ft</span>
-                    <Input
-                      id="heightInches"
-                      type="number"
-                      value={formData.heightInches}
-                      onChange={(e) => setFormData({ ...formData, heightInches: e.target.value })}
-                      placeholder="10"
-                      className="w-16"
-                    />
-                    <span className="self-center">in</span>
-                  </>
-                )}
-                <Select value={formData.heightUnit} onValueChange={(value) => setFormData({ ...formData, heightUnit: value as 'cm' | 'ft' })}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cm">cm</SelectItem>
-                    <SelectItem value="ft">ft</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Membership Information</h3>
-          <div className="space-y-2">
-            <Label htmlFor="membershipType">Membership Type *</Label>
-            <Select value={formData.membershipType} onValueChange={(value) => setFormData({ ...formData, membershipType: value as 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit' })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Gym">Gym - $39.99/month</SelectItem>
-                <SelectItem value="Gym + Cardio">Gym + Cardio - $59.99/month</SelectItem>
-                <SelectItem value="Gym + Cardio + Crossfit">Gym + Cardio + Crossfit - $89.99/month</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-2 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button type="submit">Add Member</Button>
-        </div>
-      </form>
-    );
-  };
 
   const EditMemberForm = ({ member }: { member: Member }) => {
     const formatDateForInput = (date: Date) => {
@@ -784,7 +550,7 @@ const MemberManagement: React.FC = () => {
           }}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700">
+          <Button type="submit" variant="brand">
             Update Member
           </Button>
         </div>
@@ -793,125 +559,199 @@ const MemberManagement: React.FC = () => {
   };
 
   const ViewMemberDialog = ({ member }: { member: Member }) => (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Avatar className="h-16 w-16">
-          <AvatarImage src={member.avatar} />
-          <AvatarFallback className="bg-gradient-to-br from-violet-500 to-blue-500 text-white text-xl">
-            {member.firstName[0]}{member.lastName[0]}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h3 className="text-lg font-semibold">{member.firstName} {member.lastName}</h3>
-          <p className="text-sm text-muted-foreground">Member ID: {member.id}</p>
-          <div className="flex space-x-2 mt-2">
-            <Badge className={`${member.isActive ? 'bg-blue-500/10 text-blue-700 border-blue-200' : 'bg-gray-500/10 text-gray-700 border-gray-200'} border rounded-full px-3 py-1`}>
-              {member.isActive ? 'Active' : 'Inactive'}
-            </Badge>
-            <Badge className={`${getMembershipColor(member.membershipType)} border rounded-full px-3 py-1`}>
-              {member.membershipType}
-            </Badge>
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/5 via-blue-500/5 to-cyan-500/5 p-6 border border-white/20">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <Sparkles className="h-24 w-24 text-violet-500" />
+        </div>
+        
+        <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-full blur-lg opacity-20" />
+            <Avatar className="h-24 w-24 ring-4 ring-white shadow-xl">
+              <AvatarImage src={member.avatar} />
+              <AvatarFallback className="bg-gradient-to-br from-violet-500 to-blue-500 text-white text-3xl font-bold">
+                {member.firstName[0]}{member.lastName[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute -bottom-2 -right-2">
+               <Badge className={`${member.isActive ? 'bg-green-500' : 'bg-gray-500'} text-white border-2 border-white shadow-sm`}>
+                {member.isActive ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+          </motion.div>
+          
+          <div className="text-center md:text-left space-y-2 flex-1">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">{member.firstName} {member.lastName}</h3>
+              <p className="text-muted-foreground flex items-center justify-center md:justify-start gap-2">
+                <Mail className="h-4 w-4" /> {member.email}
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-2">
+              <Badge variant="secondary" className="bg-white/50 backdrop-blur-sm border-gray-200/50">
+                ID: {member.id.slice(0, 8)}...
+              </Badge>
+              <Badge className={`${getMembershipColor(member.membershipType)} border`}>
+                {member.membershipType}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              Contact Information
-            </h4>
-            <div className="space-y-2 text-sm">
-              <p><strong>Email:</strong> {member.email}</p>
-              <p><strong>Phone:</strong> {member.phone || 'N/A'}</p>
-              <p className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{member.address || 'N/A'}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Personal Details Card */}
+        <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white/50 backdrop-blur-xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-violet-500" />
+              Personal Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Phone</p>
+                <p className="font-medium flex items-center gap-2">
+                  <Phone className="h-3 w-3 text-muted-foreground" />
+                  {member.phone || 'N/A'}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Date of Birth</p>
+                <p className="font-medium flex items-center gap-2">
+                  <Calendar className="h-3 w-3 text-muted-foreground" />
+                  {member.dateOfBirth.toLocaleDateString()} ({calculateAge(member.dateOfBirth)} yrs)
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Weight</p>
+                <p className="font-medium">{member.weight ? `${member.weight} ${member.weightUnit}` : 'N/A'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Height</p>
+                <p className="font-medium">
+                  {member.height 
+                    ? (member.heightUnit === 'cm' ? `${member.height} cm` : `${member.heightFeet}'${member.heightInches}"`)
+                    : 'N/A'}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-1 pt-2 border-t border-dashed">
+              <p className="text-muted-foreground text-xs uppercase tracking-wider">Address</p>
+              <p className="font-medium flex items-start gap-2">
+                <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
+                {member.address || 'N/A'}
               </p>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              Personal Details
-            </h4>
-            <div className="space-y-2 text-sm">
-              <p><strong>Date of Birth:</strong> {member.dateOfBirth.toLocaleDateString()}</p>
-              <p><strong>Age:</strong> {calculateAge(member.dateOfBirth)}</p>
-              {member.weight && (
-                <p><strong>Weight:</strong> {member.weight} {member.weightUnit}</p>
+        {/* Membership & Status Card */}
+        <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white/50 backdrop-blur-xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-blue-500" />
+              Membership Info
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Current Plan</span>
+                <span className="font-semibold text-violet-700">{member.membershipType}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Monthly Fee</span>
+                <span className="font-bold text-lg">${getMembershipPrice(member.membershipType)}</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Start Date</p>
+                <p className="font-medium">{member.membershipStartDate.toLocaleDateString()}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">End Date</p>
+                <p className="font-medium">{member.membershipEndDate.toLocaleDateString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Health & Emergency Card - Full Width */}
+        <Card className="md:col-span-2 border-0 shadow-lg shadow-gray-100/50 bg-white/50 backdrop-blur-xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="h-5 w-5 text-pink-500" />
+              Health & Emergency
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+               {member.emergencyContact && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-red-500" />
+                    Emergency Contact
+                  </h4>
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-100">
+                    <p className="font-medium text-red-900">{member.emergencyContact.name}</p>
+                    <p className="text-sm text-red-700">{member.emergencyContact.relationship}</p>
+                    <p className="text-sm text-red-700 font-mono mt-1">{member.emergencyContact.phone}</p>
+                  </div>
+                </div>
               )}
-              {member.height && (
-                <p><strong>Height:</strong> {
-                  member.heightUnit === 'cm' 
-                    ? `${member.height} cm`
-                    : `${member.heightFeet}'${member.heightInches || 0}"`
-                }</p>
+            </div>
+
+            <div className="space-y-4">
+              {member.fitnessGoals && member.fitnessGoals.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-gray-900">Fitness Goals</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {member.fitnessGoals.map((goal, i) => (
+                      <Badge key={i} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        {goal}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {member.medicalConditions && member.medicalConditions.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-gray-900">Medical Conditions</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {member.medicalConditions.map((condition, i) => (
+                      <Badge key={i} variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                        {condition}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-              Membership Details
-            </h4>
-            <div className="space-y-2 text-sm">
-              <p><strong>Type:</strong> {member.membershipType}</p>
-              <p><strong>Price:</strong> ${getMembershipPrice(member.membershipType)}/month</p>
-              <p><strong>Start Date:</strong> {member.membershipStartDate.toLocaleDateString()}</p>
-              <p><strong>End Date:</strong> {member.membershipEndDate.toLocaleDateString()}</p>
-            </div>
-          </div>
-
-          {member.emergencyContact && (
-            <div>
-              <h4 className="font-medium mb-2">Emergency Contact</h4>
-              <div className="space-y-2 text-sm">
-                <p><strong>Name:</strong> {member.emergencyContact.name}</p>
-                <p><strong>Phone:</strong> {member.emergencyContact.phone}</p>
-                <p><strong>Relationship:</strong> {member.emergencyContact.relationship}</p>
-              </div>
-            </div>
-          )}
-
-          {member.fitnessGoals && member.fitnessGoals.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2">Fitness Goals</h4>
-              <div className="flex flex-wrap gap-1">
-                {member.fitnessGoals.map((goal, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {goal}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {member.medicalConditions && member.medicalConditions.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2">Medical Conditions</h4>
-              <div className="flex flex-wrap gap-1">
-                {member.medicalConditions.map((condition, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {condition}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {member.notes && (
-            <div>
-              <h4 className="font-medium mb-2">Notes</h4>
-              <p className="text-sm text-muted-foreground">{member.notes}</p>
-            </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+        
+        {member.notes && (
+          <Card className="md:col-span-2 border-0 shadow-lg shadow-gray-100/50 bg-amber-50/50 backdrop-blur-xl border-amber-100/50">
+             <CardContent className="p-4">
+                <h4 className="text-sm font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                  <FileText className="h-4 w-4" /> Notes
+                </h4>
+                <p className="text-sm text-amber-800/80 italic">{member.notes}</p>
+             </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
@@ -945,27 +785,20 @@ const MemberManagement: React.FC = () => {
               Bulk Upload
             </Button>
           </motion.div>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button className="rounded-full h-11 px-6 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg shadow-violet-500/30">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add Member
-                </Button>
-              </motion.div>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl rounded-2xl border-0 shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-2xl">Add New Member</DialogTitle>
-                <DialogDescription>
-                  Fill in the member's information to create a new membership
-                </DialogDescription>
-              </DialogHeader>
-              <AddMemberForm />
-            </DialogContent>
-          </Dialog>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="brand"
+              className="rounded-full h-11 px-6 shadow-lg"
+              onClick={() => navigate('/members/new')}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Member
+            </Button>
+          </motion.div>
         </div>
       </div>
+
+
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {[
@@ -1126,7 +959,7 @@ const MemberManagement: React.FC = () => {
                             setSelectedMember(member);
                             setIsViewDialogOpen(true);
                           }}
-                          className="rounded-full hover:bg-blue-100"
+                          className="rounded-full"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -1135,11 +968,8 @@ const MemberManagement: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                setEditingMember(member);
-                                setIsEditDialogOpen(true);
-                              }}
-                              className="rounded-full hover:bg-blue-100"
+                              onClick={() => navigate(`/members/${member.id}/edit`)}
+                              className="rounded-full"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -1147,7 +977,7 @@ const MemberManagement: React.FC = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteMember(member.id)}
-                              className="rounded-full hover:bg-blue-100 hover:text-blue-600"
+                              className="rounded-full"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1183,21 +1013,17 @@ const MemberManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Member Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        setIsEditDialogOpen(open);
-        if (!open) setEditingMember(null);
-      }}>
-        <DialogContent className="max-w-4xl rounded-2xl border-0 shadow-2xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Edit Member</DialogTitle>
-            <DialogDescription>
-              Update member information
-            </DialogDescription>
-          </DialogHeader>
-          {editingMember && <EditMemberForm member={editingMember} />}
-        </DialogContent>
-      </Dialog>
+      {isEditDialogOpen && editingMember && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Edit Member</CardTitle>
+            <CardDescription>Update member information</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EditMemberForm member={editingMember} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

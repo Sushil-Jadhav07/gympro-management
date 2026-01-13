@@ -54,18 +54,7 @@ const UserManagement: React.FC = () => {
     return saved ? JSON.parse(saved) : false;
   });
 
-  // Check if user is admin
-  if (!hasRole(UserRole.ADMIN)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-center text-muted-foreground">Access denied. Admin only.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isAdmin = hasRole(UserRole.ADMIN);
 
   // Fetch users from Supabase
   useEffect(() => {
@@ -235,7 +224,7 @@ const UserManagement: React.FC = () => {
         </div>
         <div className="space-y-2">
           <Label htmlFor="role">Role *</Label>
-          <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as any })}>
+          <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as 'admin' | 'manager' | 'trainer' | 'member' })}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -303,6 +292,15 @@ const UserManagement: React.FC = () => {
       >
         <Topbar />
         <main className="p-8">
+          {!isAdmin ? (
+            <div className="min-h-[60vh] flex items-center justify-center">
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-center text-muted-foreground">Access denied. Admin only.</p>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
           <div className="space-y-8">
             <div className="flex justify-between items-center">
               <div>
@@ -315,9 +313,9 @@ const UserManagement: React.FC = () => {
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button className="rounded-full h-11 px-6 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg shadow-violet-500/30">
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Create User
+                    <Button variant="brand" className="rounded-full h-11 px-6 shadow-lg">
+                      <Users className="h-4 w-4 mr-2" />
+                      View All Users
                     </Button>
                   </motion.div>
                 </DialogTrigger>
@@ -350,7 +348,7 @@ const UserManagement: React.FC = () => {
                   whileHover={{ scale: 1.02, y: -4 }}
                   className="group relative overflow-hidden rounded-2xl bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 p-6 transition-all duration-300"
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
                   <div className="relative">
                     <div className="flex items-start justify-between mb-4">
                       <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
@@ -500,6 +498,7 @@ const UserManagement: React.FC = () => {
               </CardContent>
             </motion.div>
           </div>
+          )}
         </main>
       </motion.div>
     </div>

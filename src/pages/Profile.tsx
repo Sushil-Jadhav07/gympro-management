@@ -155,7 +155,7 @@ const Profile: React.FC = () => {
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
-                          className="absolute bottom-0 right-0 p-2 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg hover:shadow-xl transition-shadow"
+                          className="absolute bottom-0 right-0 p-2 rounded-full bg-brand-gradient-br text-white shadow-lg hover:shadow-xl transition-shadow"
                         >
                           <Camera className="h-4 w-4" />
                         </motion.button>
@@ -264,19 +264,20 @@ const Profile: React.FC = () => {
                       className={!isEditing ? "bg-muted/50" : ""}
                     />
                   </div>
-                  {isEditing && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex gap-2 pt-4"
-                    >
-                      <Button
-                        onClick={handleSave}
-                        className="flex-1 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white gap-2"
+                    {isEditing && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex gap-2 pt-4"
                       >
-                        <Check className="h-4 w-4" />
-                        Save Changes
-                      </Button>
+                        <Button
+                          onClick={handleSave}
+                          variant="brand"
+                          className="flex-1 text-white gap-2"
+                        >
+                          <Check className="h-4 w-4" />
+                          Save Changes
+                        </Button>
                       <Button
                         variant="outline"
                         onClick={handleCancel}
@@ -368,7 +369,8 @@ const Profile: React.FC = () => {
                       <div className="flex gap-2 pt-2">
                         <Button
                           onClick={handlePasswordSave}
-                          className="flex-1 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white gap-2"
+                          variant="brand"
+                          className="flex-1 text-white gap-2"
                         >
                           <Check className="h-4 w-4" />
                           Update Password
@@ -430,4 +432,3 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
-

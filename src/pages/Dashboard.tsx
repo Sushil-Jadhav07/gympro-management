@@ -81,7 +81,7 @@ const StatCard: React.FC<{
       whileHover={{ scale: 1.02, y: -4 }}
       className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 p-6 transition-all duration-300"
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
       <div className="relative">
         <div className="flex items-start justify-between mb-4">
           <div className={`p-3 rounded-xl bg-gradient-to-br ${gradient} shadow-lg`}>
@@ -220,7 +220,7 @@ const Dashboard: React.FC = () => {
                   transition={{ delay: 0.5 + index * 0.1 }}
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/20 p-4 hover:shadow-lg transition-all duration-300"
+                  className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/20 p-4 hover:shadow-md transition-all duration-300"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
                   <div className="relative flex flex-col items-center gap-2">

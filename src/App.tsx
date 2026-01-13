@@ -8,6 +8,11 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
+import MemberCreate from './pages/MemberCreate';
+import MemberEdit from './pages/MemberEdit';
+import ClassCreate from './pages/ClassCreate';
+import StaffCreate from './pages/StaffCreate';
+import PaymentCreate from './pages/PaymentCreate';
 
 const queryClient = new QueryClient();
 
@@ -67,6 +72,46 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <UserManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/new"
+        element={
+          <ProtectedRoute>
+            <MemberCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/:id/edit"
+        element={
+          <ProtectedRoute>
+            <MemberEdit />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/classes/new"
+        element={
+          <ProtectedRoute>
+            <ClassCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/new"
+        element={
+          <ProtectedRoute>
+            <StaffCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payments/new"
+        element={
+          <ProtectedRoute>
+            <PaymentCreate />
           </ProtectedRoute>
         }
       />

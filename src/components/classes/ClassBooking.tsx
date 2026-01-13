@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Class, ClassSchedule, Booking, BookingStatus, UserRole } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Class, ClassSchedule, Booking, UserRole } from '@/types';
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   Clock, 
   Users, 
@@ -17,53 +17,22 @@ import {
   Plus,
   Search,
   User,
-  Star,
-  X,
   Calendar as CalendarIcon,
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-interface NewClassForm {
-  name: string;
-  description: string;
-  instructorId: string;
-  duration: number;
-  capacity: number;
-  category: string;
-  difficulty: string;
-  price: number;
-  equipment: string[];
-  startTime: string;
-  endTime: string;
-  roomId: string;
-}
-
 const ClassBooking: React.FC = () => {
+  const navigate = useNavigate();
   const { user, hasRole } = useAuth();
   const [classes, setClasses] = useState<Class[]>([]);
   const [classSchedules, setClassSchedules] = useState<ClassSchedule[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedClass, setSelectedClass] = useState<ClassSchedule | null>(null);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
-  const [isAddClassDialogOpen, setIsAddClassDialogOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [newClassForm, setNewClassForm] = useState<NewClassForm>({
-    name: '',
-    description: '',
-    instructorId: '',
-    duration: 60,
-    capacity: 20,
-    category: '',
-    difficulty: 'Beginner',
-    price: 15,
-    equipment: [],
-    startTime: '',
-    endTime: '',
-    roomId: ''
-  });
-  const [equipmentInput, setEquipmentInput] = useState('');
+
 
   // Mock data
   useEffect(() => {
@@ -311,116 +280,6 @@ const ClassBooking: React.FC = () => {
     ));
   };
 
-  const handleAddEquipment = () => {
-    if (equipmentInput.trim() && !newClassForm.equipment.includes(equipmentInput.trim())) {
-      setNewClassForm(prev => ({
-        ...prev,
-        equipment: [...prev.equipment, equipmentInput.trim()]
-      }));
-      setEquipmentInput('');
-    }
-  };
-
-  const handleRemoveEquipment = (equipmentToRemove: string) => {
-    setNewClassForm(prev => ({
-      ...prev,
-      equipment: prev.equipment.filter(eq => eq !== equipmentToRemove)
-    }));
-  };
-
-  const handleAddClass = () => {
-    // Validation
-    if (!newClassForm.name.trim()) {
-      alert('Please enter a class name');
-      return;
-    }
-    if (!newClassForm.category) {
-      alert('Please select a category');
-      return;
-    }
-    if (!newClassForm.startTime || !newClassForm.endTime) {
-      alert('Please set start and end times');
-      return;
-    }
-
-    // Create new class
-    const newClassId = (classes.length + 1).toString();
-    const newClass: Class = {
-      id: newClassId,
-      name: newClassForm.name,
-      description: newClassForm.description,
-      instructorId: newClassForm.instructorId || '3', // Default to first instructor
-      instructor: {
-        id: '3',
-        email: 'trainer@gym.com',
-        firstName: 'Sarah',
-        lastName: 'Wilson',
-        role: UserRole.TRAINER,
-        employeeId: 'EMP003',
-        position: 'Instructor',
-        department: 'Fitness',
-        hireDate: new Date('2023-01-15'),
-        salary: 45000,
-        schedule: [],
-        certifications: [],
-        specializations: [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      capacity: newClassForm.capacity,
-      duration: newClassForm.duration,
-      price: newClassForm.price,
-      category: newClassForm.category,
-      difficulty: newClassForm.difficulty,
-      equipment: newClassForm.equipment,
-      isActive: true
-    };
-
-    // Create new schedule
-    const newSchedule: ClassSchedule = {
-      id: (classSchedules.length + 1).toString(),
-      classId: newClassId,
-      class: newClass,
-      date: new Date(),
-      startTime: newClassForm.startTime,
-      endTime: newClassForm.endTime,
-      roomId: newClassForm.roomId || '1',
-      room: {
-        id: '1',
-        name: 'Studio A',
-        capacity: 25,
-        equipment: ['Sound System', 'Mirrors'],
-        amenities: ['Air Conditioning'],
-        isActive: true
-      },
-      bookedCount: 0,
-      waitlistCount: 0,
-      status: 'scheduled'
-    };
-
-    // Update state
-    setClasses(prev => [...prev, newClass]);
-    setClassSchedules(prev => [...prev, newSchedule]);
-
-    // Reset form
-    setNewClassForm({
-      name: '',
-      description: '',
-      instructorId: '',
-      duration: 60,
-      capacity: 20,
-      category: '',
-      difficulty: 'Beginner',
-      price: 15,
-      equipment: [],
-      startTime: '',
-      endTime: '',
-      roomId: ''
-    });
-    setEquipmentInput('');
-    setIsAddClassDialogOpen(false);
-  };
-
   const filteredSchedules = classSchedules.filter(schedule => {
     const matchesCategory = filterCategory === 'all' || schedule.class.category === filterCategory;
     const matchesSearch = schedule.class.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -441,11 +300,12 @@ const ClassBooking: React.FC = () => {
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button 
-            onClick={() => setIsAddClassDialogOpen(true)}
-            className="rounded-full h-11 px-6 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg shadow-violet-500/30"
+            onClick={() => navigate('/classes/new')}
+            className="rounded-full h-11 px-6 shadow-lg"
+            variant="default"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Class
+            Create Class
           </Button>
         </motion.div>
       </div>
@@ -647,181 +507,6 @@ const ClassBooking: React.FC = () => {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Class Dialog */}
-      <Dialog open={isAddClassDialogOpen} onOpenChange={setIsAddClassDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border-0 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Add New Class</DialogTitle>
-            <DialogDescription>
-              Create a new fitness class for your gym
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="className">Class Name *</Label>
-                <Input
-                  id="className"
-                  value={newClassForm.name}
-                  onChange={(e) => setNewClassForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Morning Yoga"
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Category *</Label>
-                <Select value={newClassForm.category} onValueChange={(value) => setNewClassForm(prev => ({ ...prev, category: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Yoga">Yoga</SelectItem>
-                    <SelectItem value="Cardio">Cardio</SelectItem>
-                    <SelectItem value="Strength">Strength</SelectItem>
-                    <SelectItem value="Pilates">Pilates</SelectItem>
-                    <SelectItem value="Dance">Dance</SelectItem>
-                    <SelectItem value="Swimming">Swimming</SelectItem>
-                    <SelectItem value="Martial Arts">Martial Arts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={newClassForm.description}
-                onChange={(e) => setNewClassForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Describe the class..."
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="duration">Duration (minutes)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  value={newClassForm.duration}
-                  onChange={(e) => setNewClassForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 60 }))}
-                  min="15"
-                  max="180"
-                />
-              </div>
-              <div>
-                <Label htmlFor="capacity">Capacity</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  value={newClassForm.capacity}
-                  onChange={(e) => setNewClassForm(prev => ({ ...prev, capacity: parseInt(e.target.value) || 20 }))}
-                  min="1"
-                  max="50"
-                />
-              </div>
-              <div>
-                <Label htmlFor="price">Price ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={newClassForm.price}
-                  onChange={(e) => setNewClassForm(prev => ({ ...prev, price: parseFloat(e.target.value) || 15 }))}
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="difficulty">Difficulty Level</Label>
-                <Select value={newClassForm.difficulty} onValueChange={(value) => setNewClassForm(prev => ({ ...prev, difficulty: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="room">Room</Label>
-                <Select value={newClassForm.roomId} onValueChange={(value) => setNewClassForm(prev => ({ ...prev, roomId: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select room" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Studio A</SelectItem>
-                    <SelectItem value="2">Fitness Room</SelectItem>
-                    <SelectItem value="3">Weight Room</SelectItem>
-                    <SelectItem value="4">Pool Area</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startTime">Start Time *</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={newClassForm.startTime}
-                  onChange={(e) => setNewClassForm(prev => ({ ...prev, startTime: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="endTime">End Time *</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={newClassForm.endTime}
-                  onChange={(e) => setNewClassForm(prev => ({ ...prev, endTime: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Equipment</Label>
-              <div className="flex space-x-2 mb-2">
-                <Input
-                  value={equipmentInput}
-                  onChange={(e) => setEquipmentInput(e.target.value)}
-                  placeholder="Add equipment..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddEquipment()}
-                />
-                <Button type="button" onClick={handleAddEquipment}>Add</Button>
-              </div>
-              {newClassForm.equipment.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {newClassForm.equipment.map((equipment, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center space-x-1">
-                      <span>{equipment}</span>
-                      <X 
-                        className="h-3 w-3 cursor-pointer" 
-                        onClick={() => handleRemoveEquipment(equipment)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => setIsAddClassDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddClass}>
-                Create Class
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>

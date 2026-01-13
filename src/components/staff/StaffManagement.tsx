@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Staff, UserRole, WorkSchedule } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,12 +32,29 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
 import { toast } from 'sonner';
 
+type SupabaseStaffRow = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string | null;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+  employee_id?: string | null;
+  position: string;
+  department: string;
+  hire_date?: string | null;
+  salary?: string | number | null;
+  certifications?: string[] | null;
+  specializations?: string[] | null;
+};
 const StaffManagement: React.FC = () => {
-  const { hasRole } = useAuth();
+  const navigate = useNavigate();
+  const { user, hasRole } = useAuth();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -44,7 +62,7 @@ const StaffManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to convert Supabase staff to Staff interface
-  const mapSupabaseStaffToStaff = (dbStaff: any): Staff => {
+  const mapSupabaseStaffToStaff = (dbStaff: SupabaseStaffRow): Staff => {
     return {
       id: dbStaff.id,
       email: dbStaff.email,
@@ -58,7 +76,7 @@ const StaffManagement: React.FC = () => {
       position: dbStaff.position,
       department: dbStaff.department,
       hireDate: dbStaff.hire_date ? new Date(dbStaff.hire_date) : new Date(),
-      salary: dbStaff.salary ? parseFloat(dbStaff.salary) : 0,
+      salary: dbStaff.salary ? parseFloat(String(dbStaff.salary)) : 0,
       schedule: [], // Schedule not stored in staff table
       certifications: dbStaff.certifications || [],
       specializations: dbStaff.specializations || []
@@ -200,176 +218,6 @@ const StaffManagement: React.FC = () => {
     }
   };
 
-  const AddStaffForm = () => {
-    const [formData, setFormData] = useState({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      position: '',
-      department: '',
-      salary: '',
-      role: UserRole.STAFF
-    });
-
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      try {
-        const employeeId = `EMP${String(Date.now()).slice(-3)}`;
-        
-        const { data, error } = await supabase
-          .from('staff')
-          .insert({
-            gym_id: DEFAULT_GYM_ID,
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            phone: formData.phone || null,
-            employee_id: employeeId,
-            position: formData.position,
-            department: formData.department,
-            role: formData.role,
-            salary: parseFloat(formData.salary).toString(),
-            hire_date: new Date().toISOString().split('T')[0],
-            certifications: [],
-            specializations: []
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating staff:', error);
-          toast.error(error.message || 'Failed to create staff member');
-          return;
-        }
-
-        const newStaff = mapSupabaseStaffToStaff(data);
-        setStaff(prev => [newStaff, ...prev]);
-        setIsAddDialogOpen(false);
-        toast.success('Staff member added successfully');
-        
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          position: '',
-          department: '',
-          salary: '',
-          role: UserRole.STAFF
-        });
-      } catch (error) {
-        console.error('Error creating staff:', error);
-        toast.error('Failed to create staff member');
-      }
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
-            <Input
-              id="firstName"
-              value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
-            <Input
-              id="lastName"
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="position">Position</Label>
-            <Input
-              id="position"
-              value={formData.position}
-              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="department">Department</Label>
-            <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Fitness">Fitness</SelectItem>
-                <SelectItem value="Operations">Operations</SelectItem>
-                <SelectItem value="Management">Management</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="salary">Annual Salary</Label>
-            <Input
-              id="salary"
-              type="number"
-              value={formData.salary}
-              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UserRole.TRAINER}>Trainer</SelectItem>
-                <SelectItem value={UserRole.STAFF}>Staff</SelectItem>
-                <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button type="submit">Add Staff Member</Button>
-        </div>
-      </form>
-    );
-  };
-
   const EditStaffForm = ({ staff: staffMember }: { staff: Staff }) => {
     const [formData, setFormData] = useState({
       firstName: staffMember.firstName,
@@ -503,7 +351,7 @@ const StaffManagement: React.FC = () => {
           }}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700">
+          <Button type="submit" variant="brand">
             Update Staff Member
           </Button>
         </div>
@@ -609,29 +457,20 @@ const StaffManagement: React.FC = () => {
             <Sparkles className="h-7 w-7 text-violet-600" />
             Staff Management
           </h2>
-          <p className="text-muted-foreground">Manage staff members, schedules, and payroll</p>
+          <p className="text-muted-foreground">Manage gym staff and roles</p>
         </div>
-        {hasRole(UserRole.MANAGER) && (
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button className="rounded-full h-11 px-6 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg shadow-violet-500/30">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Staff
-                </Button>
-              </motion.div>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl rounded-2xl border-0 shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-2xl">Add New Staff Member</DialogTitle>
-                <DialogDescription>
-                  Create a new staff account with employment details
-                </DialogDescription>
-              </DialogHeader>
-              <AddStaffForm />
-            </DialogContent>
-          </Dialog>
-        )}
+        <div className="flex gap-3">
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="brand"
+              className="rounded-full h-11 px-6 shadow-lg"
+              onClick={() => navigate('/staff/new')}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Staff
+            </Button>
+          </motion.div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -756,7 +595,6 @@ const StaffManagement: React.FC = () => {
                               setEditingStaff(staffMember);
                               setIsEditDialogOpen(true);
                             }}
-                            className="hover:bg-blue-100"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -764,7 +602,7 @@ const StaffManagement: React.FC = () => {
                             variant="ghost" 
                             size="sm"
                             onClick={() => handleDeleteStaff(staffMember.id)}
-                            className="hover:bg-blue-100 hover:text-blue-600"
+                            
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -789,21 +627,17 @@ const StaffManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Staff Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        setIsEditDialogOpen(open);
-        if (!open) setEditingStaff(null);
-      }}>
-        <DialogContent className="max-w-2xl rounded-2xl border-0 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Edit Staff Member</DialogTitle>
-            <DialogDescription>
-              Update staff member information
-            </DialogDescription>
-          </DialogHeader>
-          {editingStaff && <EditStaffForm staff={editingStaff} />}
-        </DialogContent>
-      </Dialog>
+      {isEditDialogOpen && editingStaff && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Edit Staff Member</CardTitle>
+            <CardDescription>Update staff member information</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EditStaffForm staff={editingStaff} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

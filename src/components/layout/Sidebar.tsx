@@ -96,8 +96,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
     if (item.id === 'users') {
       return location.pathname === '/users';
     }
-    const activeTab = getActiveTab();
-    return activeTab === item.id;
+    
+    if (item.id === 'members' && location.pathname.startsWith('/members/')) {
+      return true;
+    }
+
+    if (location.pathname === '/dashboard') {
+      const activeTab = getActiveTab();
+      return activeTab === item.id;
+    }
+    
+    return false;
   };
 
   return (
@@ -121,7 +130,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
               <>
                 <motion.div
                   whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 shadow-lg shadow-violet-500/20 flex-shrink-0"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-br shadow-lg shadow-violet-500/20 flex-shrink-0"
                 >
                   <Dumbbell className="h-5 w-5 text-white" />
                 </motion.div>
@@ -140,7 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
               <>
                 <motion.div
                   whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 shadow-lg shadow-violet-500/20 flex-shrink-0"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-br shadow-lg shadow-violet-500/20 flex-shrink-0"
                 >
                   <Dumbbell className="h-5 w-5 text-white" />
                 </motion.div>
@@ -152,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden flex-1"
                   >
-                    <h1 className="text-lg font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent whitespace-nowrap">
+                    <h1 className="text-lg font-bold text-brand-gradient whitespace-nowrap">
                       GymPro
                     </h1>
                     <p className="text-xs text-muted-foreground whitespace-nowrap">Management</p>
@@ -190,7 +199,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
                         "relative w-full flex items-center rounded-xl text-sm font-medium transition-all duration-200",
                         isCollapsed ? "justify-center px-3 py-3" : "gap-3 px-4 py-3",
                         active
-                          ? "bg-gradient-to-r from-violet-600 to-blue-600 text-white shadow-lg shadow-violet-500/30"
+                          ? "bg-brand-gradient text-white shadow-lg shadow-violet-500/30"
                           : "text-muted-foreground hover:bg-accent hover:text-foreground"
                       )}
                     >
@@ -310,4 +319,3 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
 };
 
 export default Sidebar;
-

@@ -68,7 +68,7 @@ const Topbar: React.FC = () => {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center"
+                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-brand-gradient flex items-center justify-center"
                 >
                   <span className="text-[10px] font-bold text-white">{notifications}</span>
                 </motion.div>
@@ -92,7 +92,7 @@ const Topbar: React.FC = () => {
               className="flex items-center gap-2 h-10 px-3 rounded-full hover:bg-accent"
             >
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-gradient-to-br from-violet-500 to-blue-500 text-white text-sm font-semibold">
+                <AvatarFallback className="bg-brand-gradient-br text-white text-sm font-semibold">
                   {user?.firstName?.[0]}{user?.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
@@ -126,4 +126,3 @@ const Topbar: React.FC = () => {
 };
 
 export default Topbar;
-

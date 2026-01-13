@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Payment, PaymentType, PaymentMethod, PaymentStatus, Invoice, PromoCode } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +34,7 @@ import { useAuth } from '@/hooks/useAuth';
 import PaymentStatusComponent from './PaymentStatus';
 
 const PaymentSystem: React.FC = () => {
+  const navigate = useNavigate();
   const { hasRole } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -63,6 +65,7 @@ const PaymentSystem: React.FC = () => {
         id: '2',
         memberId: '2',
         amount: 20.00,
+        dueDate: new Date('2024-01-18'),
         currency: 'USD',
         type: PaymentType.CLASS,
         method: PaymentMethod.PAYPAL,
@@ -199,140 +202,6 @@ const PaymentSystem: React.FC = () => {
     
     return matchesSearch && matchesStatus;
   });
-
-  const ProcessPaymentForm = () => {
-    const [formData, setFormData] = useState({
-      memberId: '',
-      amount: '',
-      type: PaymentType.MEMBERSHIP,
-      method: PaymentMethod.STRIPE,
-      description: '',
-      promoCode: ''
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      console.log('Processing payment:', formData);
-      
-      // Create new payment record
-      const newPayment: Payment = {
-        id: Date.now().toString(),
-        memberId: formData.memberId,
-        amount: parseFloat(formData.amount),
-        currency: 'USD',
-        type: formData.type,
-        method: formData.method,
-        status: PaymentStatus.COMPLETED,
-        description: formData.description,
-        transactionId: `txn_${Date.now()}`,
-        paidDate: new Date(),
-        dueDate: new Date()
-      };
-
-      setPayments(prev => [newPayment, ...prev]);
-      setIsPaymentDialogOpen(false);
-      
-      // Reset form
-      setFormData({
-        memberId: '',
-        amount: '',
-        type: PaymentType.MEMBERSHIP,
-        method: PaymentMethod.STRIPE,
-        description: '',
-        promoCode: ''
-      });
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="memberId">Member ID</Label>
-            <Input
-              id="memberId"
-              value={formData.memberId}
-              onChange={(e) => setFormData({ ...formData, memberId: e.target.value })}
-              placeholder="Enter member ID"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              placeholder="0.00"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="type">Payment Type</Label>
-            <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value as PaymentType })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={PaymentType.MEMBERSHIP}>Membership</SelectItem>
-                <SelectItem value={PaymentType.CLASS}>Class</SelectItem>
-                <SelectItem value={PaymentType.PERSONAL_TRAINING}>Personal Training</SelectItem>
-                <SelectItem value={PaymentType.EQUIPMENT_RENTAL}>Equipment Rental</SelectItem>
-                <SelectItem value={PaymentType.LATE_FEE}>Late Fee</SelectItem>
-                <SelectItem value={PaymentType.OTHER}>Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="method">Payment Method</Label>
-            <Select value={formData.method} onValueChange={(value) => setFormData({ ...formData, method: value as PaymentMethod })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={PaymentMethod.STRIPE}>Stripe</SelectItem>
-                <SelectItem value={PaymentMethod.PAYPAL}>PayPal</SelectItem>
-                <SelectItem value={PaymentMethod.CASH}>Cash</SelectItem>
-                <SelectItem value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Input
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Payment description"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="promoCode">Promo Code (Optional)</Label>
-          <Input
-            id="promoCode"
-            value={formData.promoCode}
-            onChange={(e) => setFormData({ ...formData, promoCode: e.target.value })}
-            placeholder="Enter promo code"
-          />
-        </div>
-
-        <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button type="submit">Process Payment</Button>
-        </div>
-      </form>
-    );
-  };
 
   const CreatePromoCodeForm = () => {
     const [formData, setFormData] = useState({
@@ -501,25 +370,16 @@ const PaymentSystem: React.FC = () => {
               <CreatePromoCodeForm />
             </DialogContent>
           </Dialog>
-          <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-            <DialogTrigger asChild>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button className="rounded-full h-11 px-6 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 shadow-lg shadow-violet-500/30">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Process Payment
-                </Button>
-              </motion.div>
-            </DialogTrigger>
-            <DialogContent className="rounded-2xl border-0 shadow-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-2xl">Process Payment</DialogTitle>
-                <DialogDescription>
-                  Process a new payment for a member
-                </DialogDescription>
-              </DialogHeader>
-              <ProcessPaymentForm />
-            </DialogContent>
-          </Dialog>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button 
+              variant="brand" 
+              className="rounded-full h-11 px-6 shadow-lg"
+              onClick={() => navigate('/payments/new')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Process Payment
+            </Button>
+          </motion.div>
         </div>
       </div>
 
