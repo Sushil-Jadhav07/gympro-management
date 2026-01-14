@@ -57,8 +57,6 @@ const StaffManagement: React.FC = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to convert Supabase staff to Staff interface
@@ -157,42 +155,6 @@ const StaffManagement: React.FC = () => {
     return matchesSearch && matchesDepartment;
   });
 
-  const handleUpdateStaff = async (updatedStaff: Staff) => {
-    try {
-      const { error } = await supabase
-        .from('staff')
-        .update({
-          first_name: updatedStaff.firstName,
-          last_name: updatedStaff.lastName,
-          email: updatedStaff.email,
-          phone: updatedStaff.phone || null,
-          position: updatedStaff.position,
-          department: updatedStaff.department,
-          role: updatedStaff.role,
-          salary: updatedStaff.salary.toString(),
-          hire_date: updatedStaff.hireDate.toISOString().split('T')[0],
-          certifications: updatedStaff.certifications || [],
-          specializations: updatedStaff.specializations || [],
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', updatedStaff.id);
-
-      if (error) {
-        console.error('Error updating staff:', error);
-        toast.error('Failed to update staff member');
-        return;
-      }
-
-      setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
-      setIsEditDialogOpen(false);
-      setEditingStaff(null);
-      toast.success('Staff member updated successfully');
-    } catch (error) {
-      console.error('Error updating staff:', error);
-      toast.error('Failed to update staff member');
-    }
-  };
-
   const handleDeleteStaff = async (staffId: string) => {
     if (!window.confirm('Are you sure you want to delete this staff member?')) {
       return;
@@ -216,147 +178,6 @@ const StaffManagement: React.FC = () => {
       console.error('Error deleting staff:', error);
       toast.error('Failed to delete staff member');
     }
-  };
-
-  const EditStaffForm = ({ staff: staffMember }: { staff: Staff }) => {
-    const [formData, setFormData] = useState({
-      firstName: staffMember.firstName,
-      lastName: staffMember.lastName,
-      email: staffMember.email,
-      phone: staffMember.phone,
-      position: staffMember.position,
-      department: staffMember.department,
-      salary: staffMember.salary.toString(),
-      role: staffMember.role
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      const updatedStaff: Staff = {
-        ...staffMember,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        position: formData.position,
-        department: formData.department,
-        salary: parseFloat(formData.salary),
-        role: formData.role,
-        updatedAt: new Date()
-      };
-
-      handleUpdateStaff(updatedStaff);
-    };
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-firstName">First Name</Label>
-            <Input
-              id="edit-firstName"
-              value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-lastName">Last Name</Label>
-            <Input
-              id="edit-lastName"
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="edit-email">Email</Label>
-          <Input
-            id="edit-email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="edit-phone">Phone</Label>
-          <Input
-            id="edit-phone"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-position">Position</Label>
-            <Input
-              id="edit-position"
-              value={formData.position}
-              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-department">Department</Label>
-            <Select value={formData.department} onValueChange={(value) => setFormData({ ...formData, department: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Fitness">Fitness</SelectItem>
-                <SelectItem value="Operations">Operations</SelectItem>
-                <SelectItem value="Management">Management</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="edit-salary">Annual Salary</Label>
-            <Input
-              id="edit-salary"
-              type="number"
-              value={formData.salary}
-              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-role">Role</Label>
-            <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={UserRole.TRAINER}>Trainer</SelectItem>
-                <SelectItem value={UserRole.STAFF}>Staff</SelectItem>
-                <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-2 pt-4 border-t">
-          <Button type="button" variant="outline" onClick={() => {
-            setIsEditDialogOpen(false);
-            setEditingStaff(null);
-          }}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="brand">
-            Update Staff Member
-          </Button>
-        </div>
-      </form>
-    );
   };
 
   const StaffDetailsDialog = ({ staff: staffMember }: { staff: Staff }) => (
@@ -591,10 +412,8 @@ const StaffManagement: React.FC = () => {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => {
-                              setEditingStaff(staffMember);
-                              setIsEditDialogOpen(true);
-                            }}
+                            onClick={() => navigate(`/staff/${staffMember.id}/edit`)}
+                            className="rounded-full"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -627,17 +446,6 @@ const StaffManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {isEditDialogOpen && editingStaff && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Edit Staff Member</CardTitle>
-            <CardDescription>Update staff member information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EditStaffForm staff={editingStaff} />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };

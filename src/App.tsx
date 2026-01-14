@@ -12,6 +12,7 @@ import MemberCreate from './pages/MemberCreate';
 import MemberEdit from './pages/MemberEdit';
 import ClassCreate from './pages/ClassCreate';
 import StaffCreate from './pages/StaffCreate';
+import StaffEdit from './pages/StaffEdit';
 import PaymentCreate from './pages/PaymentCreate';
 
 const queryClient = new QueryClient();
@@ -104,6 +105,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <StaffCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/:id/edit"
+        element={
+          <ProtectedRoute>
+            <StaffEdit />
           </ProtectedRoute>
         }
       />

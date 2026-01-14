@@ -33,6 +33,9 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import PaymentStatusComponent from './PaymentStatus';
 
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+
 const PaymentSystem: React.FC = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
@@ -43,103 +46,97 @@ const PaymentSystem: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isPromoDialogOpen, setIsPromoDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data
+  // Fetch data from Supabase
   useEffect(() => {
-    const mockPayments: Payment[] = [
-      {
-        id: '1',
-        memberId: '1',
-        amount: 79.99,
-        currency: 'USD',
-        type: PaymentType.MEMBERSHIP,
-        method: PaymentMethod.STRIPE,
-        status: PaymentStatus.COMPLETED,
-        description: 'Premium Membership - January 2024',
-        transactionId: 'txn_1234567890',
-        invoiceId: 'INV-001',
-        paidDate: new Date('2024-01-15'),
-        dueDate: new Date('2024-01-15')
-      },
-      {
-        id: '2',
-        memberId: '2',
-        amount: 20.00,
-        dueDate: new Date('2024-01-18'),
-        currency: 'USD',
-        type: PaymentType.CLASS,
-        method: PaymentMethod.PAYPAL,
-        status: PaymentStatus.COMPLETED,
-        description: 'HIIT Training Class',
-        transactionId: 'pp_9876543210',
-        paidDate: new Date('2024-01-18')
-      },
-      {
-        id: '3',
-        memberId: '3',
-        amount: 129.99,
-        currency: 'USD',
-        type: PaymentType.MEMBERSHIP,
-        method: PaymentMethod.STRIPE,
-        status: PaymentStatus.PENDING,
-        description: 'VIP Membership - January 2024',
-        dueDate: new Date('2024-01-20')
-      },
-      {
-        id: '4',
-        memberId: '1',
-        amount: 15.00,
-        currency: 'USD',
-        type: PaymentType.CLASS,
-        method: PaymentMethod.STRIPE,
-        status: PaymentStatus.FAILED,
-        description: 'Yoga Class',
-        dueDate: new Date('2024-01-19')
-      },
-      {
-        id: '5',
-        memberId: '2',
-        amount: 49.99,
-        currency: 'USD',
-        type: PaymentType.MEMBERSHIP,
-        method: PaymentMethod.STRIPE,
-        status: PaymentStatus.OVERDUE,
-        description: 'Basic Membership - February 2024',
-        dueDate: new Date('2024-01-10')
-      }
-    ];
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
 
-    const mockPromoCodes: PromoCode[] = [
-      {
-        id: '1',
-        code: 'NEWYEAR2024',
-        description: 'New Year Special - 20% off',
-        type: 'percentage',
-        value: 20,
-        validFrom: new Date('2024-01-01'),
-        validTo: new Date('2024-01-31'),
-        usageLimit: 100,
-        usedCount: 45,
-        isActive: true,
-        applicableServices: ['membership', 'class']
-      },
-      {
-        id: '2',
-        code: 'FIRST10',
-        description: '$10 off first payment',
-        type: 'fixed',
-        value: 10,
-        validFrom: new Date('2024-01-01'),
-        validTo: new Date('2024-12-31'),
-        usageLimit: 500,
-        usedCount: 123,
-        isActive: true,
-        applicableServices: ['membership']
-      }
-    ];
+        // 1. Fetch Payments
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('payments')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-    setPayments(mockPayments);
-    setPromoCodes(mockPromoCodes);
+        if (paymentsError) throw paymentsError;
+
+        const mappedPayments: Payment[] = paymentsData.map((p: any) => ({
+          id: p.id,
+          memberId: p.member_id,
+          amount: parseFloat(p.amount),
+          currency: p.currency,
+          type: p.type as PaymentType,
+          method: p.method as PaymentMethod,
+          status: p.status as PaymentStatus,
+          description: p.description,
+          transactionId: p.transaction_id,
+          invoiceId: p.invoice_id,
+          paidDate: p.paid_date ? new Date(p.paid_date) : undefined,
+          dueDate: new Date(p.due_date),
+          refundedDate: p.refunded_date ? new Date(p.refunded_date) : undefined,
+          refundAmount: p.refund_amount ? parseFloat(p.refund_amount) : undefined
+        }));
+
+        setPayments(mappedPayments);
+
+        // 2. Fetch Promo Codes
+        const { data: promoData, error: promoError } = await supabase
+          .from('promo_codes')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (promoError) throw promoError;
+
+        const mappedPromoCodes: PromoCode[] = promoData.map((p: any) => ({
+          id: p.id,
+          code: p.code,
+          description: p.description,
+          type: p.type as 'percentage' | 'fixed',
+          value: parseFloat(p.value),
+          validFrom: new Date(p.valid_from),
+          validTo: new Date(p.valid_to),
+          usageLimit: p.usage_limit,
+          usedCount: p.used_count || 0,
+          isActive: p.is_active,
+          applicableServices: p.applicable_services || []
+        }));
+
+        setPromoCodes(mappedPromoCodes);
+
+        // 3. Fetch Invoices (if table exists)
+        // Assuming invoices table exists
+        const { data: invoicesData, error: invoicesError } = await supabase
+          .from('invoices')
+          .select('*')
+          .order('issue_date', { ascending: false });
+
+        if (!invoicesError && invoicesData) {
+           const mappedInvoices: Invoice[] = invoicesData.map((i: any) => ({
+             id: i.id,
+             memberId: i.member_id,
+             amount: parseFloat(i.amount),
+             currency: i.currency,
+             description: i.description,
+             issueDate: new Date(i.issue_date),
+             dueDate: new Date(i.due_date),
+             paidDate: i.paid_date ? new Date(i.paid_date) : undefined,
+             status: i.status,
+             items: i.items || []
+           }));
+           setInvoices(mappedInvoices);
+        }
+
+      } catch (error) {
+        console.error('Error fetching payment data:', error);
+        toast.error('Failed to load payment data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const getStatusColor = (status: PaymentStatus) => {
@@ -214,26 +211,52 @@ const PaymentSystem: React.FC = () => {
       usageLimit: ''
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      console.log('Creating promo code:', formData);
       
-      const newPromoCode: PromoCode = {
-        id: Date.now().toString(),
-        code: formData.code,
-        description: formData.description,
-        type: formData.type,
-        value: parseFloat(formData.value),
-        validFrom: new Date(formData.validFrom),
-        validTo: new Date(formData.validTo),
-        usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : undefined,
-        usedCount: 0,
-        isActive: true,
-        applicableServices: ['membership', 'class']
-      };
+      try {
+        const promoData = {
+          code: formData.code,
+          description: formData.description,
+          type: formData.type,
+          value: parseFloat(formData.value),
+          valid_from: formData.validFrom,
+          valid_to: formData.validTo,
+          usage_limit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
+          used_count: 0,
+          is_active: true,
+          applicable_services: ['membership', 'class']
+        };
 
-      setPromoCodes(prev => [newPromoCode, ...prev]);
-      setIsPromoDialogOpen(false);
+        const { data, error } = await supabase
+          .from('promo_codes')
+          .insert(promoData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const newPromoCode: PromoCode = {
+          id: data.id,
+          code: data.code,
+          description: data.description,
+          type: data.type as 'percentage' | 'fixed',
+          value: parseFloat(data.value),
+          validFrom: new Date(data.valid_from),
+          validTo: new Date(data.valid_to),
+          usageLimit: data.usage_limit,
+          usedCount: data.used_count || 0,
+          isActive: data.is_active,
+          applicableServices: data.applicable_services || []
+        };
+
+        setPromoCodes(prev => [newPromoCode, ...prev]);
+        setIsPromoDialogOpen(false);
+        toast.success('Promo code created successfully');
+      } catch (error: any) {
+        console.error('Error creating promo code:', error);
+        toast.error(error.message || 'Failed to create promo code');
+      }
     };
 
     return (

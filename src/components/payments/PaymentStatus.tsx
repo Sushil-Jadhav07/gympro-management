@@ -20,82 +20,72 @@ import {
   TrendingUp
 } from 'lucide-react';
 
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+
 const PaymentStatus: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data
+  // Fetch data from Supabase
   useEffect(() => {
-    const mockPayments: Payment[] = [
-      {
-        id: '1',
-        memberId: '1',
-        amount: 59.99,
-        status: PaymentStatusType.COMPLETED,
-        paymentDate: new Date('2024-08-01'),
-        dueDate: new Date('2024-08-01'),
-        method: 'Credit Card',
-        description: 'Monthly Membership - Gym + Cardio',
-        createdAt: new Date('2024-08-01'),
-        updatedAt: new Date('2024-08-01')
-      },
-      {
-        id: '2',
-        memberId: '2',
-        amount: 39.99,
-        status: PaymentStatusType.OVERDUE,
-        paymentDate: null,
-        dueDate: new Date('2024-07-15'),
-        method: 'Credit Card',
-        description: 'Monthly Membership - Gym',
-        createdAt: new Date('2024-07-15'),
-        updatedAt: new Date('2024-07-15')
-      },
-      {
-        id: '3',
-        memberId: '3',
-        amount: 89.99,
-        status: PaymentStatusType.PENDING,
-        paymentDate: null,
-        dueDate: new Date('2024-09-01'),
-        method: 'Bank Transfer',
-        description: 'Monthly Membership - Full Package',
-        createdAt: new Date('2024-08-15'),
-        updatedAt: new Date('2024-08-15')
-      }
-    ];
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
 
-    const mockMembers: Member[] = [
-      {
-        id: '1',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@email.com',
-        membershipType: 'Gym + Cardio',
-        isActive: true
-      },
-      {
-        id: '2',
-        firstName: 'Sarah',
-        lastName: 'Smith',
-        email: 'sarah.smith@email.com',
-        membershipType: 'Gym',
-        isActive: true
-      },
-      {
-        id: '3',
-        firstName: 'Mike',
-        lastName: 'Johnson',
-        email: 'mike.johnson@email.com',
-        membershipType: 'Gym + Cardio + Crossfit',
-        isActive: true
-      }
-    ] as Member[];
+        // 1. Fetch Payments
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('payments')
+          .select('*')
+          .order('due_date', { ascending: false });
 
-    setPayments(mockPayments);
-    setMembers(mockMembers);
+        if (paymentsError) throw paymentsError;
+
+        const mappedPayments: Payment[] = paymentsData.map((p: any) => ({
+          id: p.id,
+          memberId: p.member_id,
+          amount: parseFloat(p.amount),
+          status: p.status as PaymentStatusType,
+          paymentDate: p.paid_date ? new Date(p.paid_date) : undefined,
+          dueDate: new Date(p.due_date),
+          method: p.method,
+          description: p.description,
+          createdAt: new Date(p.created_at),
+          updatedAt: new Date(p.updated_at || p.created_at)
+        }));
+
+        setPayments(mappedPayments);
+
+        // 2. Fetch Members
+        const { data: membersData, error: membersError } = await supabase
+          .from('members')
+          .select('id, first_name, last_name, email, membership_type, status');
+
+        if (membersError) throw membersError;
+
+        const mappedMembers: Member[] = membersData.map((m: any) => ({
+          id: m.id,
+          firstName: m.first_name,
+          lastName: m.last_name,
+          email: m.email,
+          membershipType: m.membership_type,
+          isActive: m.status === 'ACTIVE'
+        } as Member));
+
+        setMembers(mappedMembers);
+
+      } catch (error) {
+        console.error('Error fetching payment status data:', error);
+        toast.error('Failed to load payment status');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const getStatusColor = (status: PaymentStatusType) => {

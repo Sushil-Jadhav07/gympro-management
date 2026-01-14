@@ -22,6 +22,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+
 const ClassBooking: React.FC = () => {
   const navigate = useNavigate();
   const { user, hasRole } = useAuth();
@@ -32,252 +35,172 @@ const ClassBooking: React.FC = () => {
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-
-  // Mock data
+  // Fetch data from Supabase
   useEffect(() => {
-    const mockClasses: Class[] = [
-      {
-        id: '1',
-        name: 'Morning Yoga',
-        description: 'Start your day with relaxing yoga',
-        instructorId: '3',
-        instructor: {
-          id: '3',
-          email: 'trainer@gym.com',
-          firstName: 'Sarah',
-          lastName: 'Wilson',
-          role: UserRole.TRAINER,
-          employeeId: 'EMP003',
-          position: 'Yoga Instructor',
-          department: 'Fitness',
-          hireDate: new Date('2023-01-15'),
-          salary: 45000,
-          schedule: [],
-          certifications: ['RYT-200', 'Prenatal Yoga'],
-          specializations: ['Hatha Yoga', 'Vinyasa'],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        capacity: 20,
-        duration: 60,
-        price: 15,
-        category: 'Yoga',
-        difficulty: 'Beginner',
-        equipment: ['Yoga Mat', 'Blocks'],
-        isActive: true
-      },
-      {
-        id: '2',
-        name: 'HIIT Training',
-        description: 'High-intensity interval training',
-        instructorId: '4',
-        instructor: {
-          id: '4',
-          email: 'mike.trainer@gym.com',
-          firstName: 'Mike',
-          lastName: 'Johnson',
-          role: UserRole.TRAINER,
-          employeeId: 'EMP004',
-          position: 'Fitness Trainer',
-          department: 'Fitness',
-          hireDate: new Date('2023-03-01'),
-          salary: 50000,
-          schedule: [],
-          certifications: ['NASM-CPT', 'HIIT Specialist'],
-          specializations: ['HIIT', 'Strength Training'],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        capacity: 15,
-        duration: 45,
-        price: 20,
-        category: 'Cardio',
-        difficulty: 'Advanced',
-        equipment: ['Kettlebells', 'Battle Ropes'],
-        isActive: true
-      },
-      {
-        id: '3',
-        name: 'Strength Training',
-        description: 'Build muscle and strength',
-        instructorId: '5',
-        instructor: {
-          id: '5',
-          email: 'lisa.trainer@gym.com',
-          firstName: 'Lisa',
-          lastName: 'Davis',
-          role: UserRole.TRAINER,
-          employeeId: 'EMP005',
-          position: 'Strength Coach',
-          department: 'Fitness',
-          hireDate: new Date('2022-11-01'),
-          salary: 55000,
-          schedule: [],
-          certifications: ['CSCS', 'Powerlifting Coach'],
-          specializations: ['Powerlifting', 'Olympic Lifting'],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        capacity: 12,
-        duration: 75,
-        price: 25,
-        category: 'Strength',
-        difficulty: 'Intermediate',
-        equipment: ['Barbells', 'Dumbbells', 'Squat Rack'],
-        isActive: true
-      },
-      {
-        id: '4',
-        name: 'Pilates',
-        description: 'Core strengthening and flexibility',
-        instructorId: '6',
-        instructor: {
-          id: '6',
-          email: 'emma.trainer@gym.com',
-          firstName: 'Emma',
-          lastName: 'Brown',
-          role: UserRole.TRAINER,
-          employeeId: 'EMP006',
-          position: 'Pilates Instructor',
-          department: 'Fitness',
-          hireDate: new Date('2023-02-01'),
-          salary: 42000,
-          schedule: [],
-          certifications: ['PMA-CPT', 'Mat Pilates'],
-          specializations: ['Classical Pilates', 'Reformer'],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        capacity: 15,
-        duration: 50,
-        price: 18,
-        category: 'Pilates',
-        difficulty: 'Beginner',
-        equipment: ['Pilates Mat', 'Resistance Bands'],
-        isActive: true
-      }
-    ];
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // 1. Fetch Classes with Instructor details
+        // We'll fetch classes first
+        const { data: classesData, error: classesError } = await supabase
+          .from('classes')
+          .select('*');
+          
+        if (classesError) throw classesError;
+        
+        // For instructors, we need to fetch them from users/staff table
+        // We'll collect all instructor IDs
+        const instructorIds = [...new Set(classesData.map((c: any) => c.instructor_id))];
+        
+        const { data: instructorsData, error: instructorsError } = await supabase
+          .from('staff') // Assuming instructors are in staff table
+          .select('*')
+          .in('id', instructorIds);
+          
+        if (instructorsError) {
+           console.warn('Could not fetch instructors', instructorsError);
+        }
+        
+        const instructorsMap = new Map(instructorsData?.map((i: any) => [i.id, i]) || []);
 
-    const mockSchedules: ClassSchedule[] = [
-      {
-        id: '1',
-        classId: '1',
-        class: mockClasses[0],
-        date: new Date(),
-        startTime: '07:00',
-        endTime: '08:00',
-        roomId: '1',
-        room: {
-          id: '1',
-          name: 'Studio A',
-          capacity: 25,
-          equipment: ['Sound System', 'Mirrors', 'Yoga Mats'],
-          amenities: ['Air Conditioning', 'Water Fountain'],
-          isActive: true
-        },
-        bookedCount: 12,
-        waitlistCount: 2,
-        status: 'scheduled'
-      },
-      {
-        id: '2',
-        classId: '2',
-        class: mockClasses[1],
-        date: new Date(),
-        startTime: '18:00',
-        endTime: '18:45',
-        roomId: '2',
-        room: {
-          id: '2',
-          name: 'Fitness Room',
-          capacity: 20,
-          equipment: ['Kettlebells', 'Battle Ropes', 'TRX'],
-          amenities: ['Air Conditioning', 'Sound System'],
-          isActive: true
-        },
-        bookedCount: 15,
-        waitlistCount: 0,
-        status: 'scheduled'
-      },
-      {
-        id: '3',
-        classId: '3',
-        class: mockClasses[2],
-        date: new Date(),
-        startTime: '19:00',
-        endTime: '20:15',
-        roomId: '3',
-        room: {
-          id: '3',
-          name: 'Weight Room',
-          capacity: 15,
-          equipment: ['Free Weights', 'Machines', 'Benches'],
-          amenities: ['Air Conditioning', 'Towel Service'],
-          isActive: true
-        },
-        bookedCount: 8,
-        waitlistCount: 0,
-        status: 'scheduled'
-      },
-      {
-        id: '4',
-        classId: '4',
-        class: mockClasses[3],
-        date: new Date(),
-        startTime: '10:00',
-        endTime: '10:50',
-        roomId: '1',
-        room: {
-          id: '1',
-          name: 'Studio A',
-          capacity: 25,
-          equipment: ['Sound System', 'Mirrors', 'Yoga Mats'],
-          amenities: ['Air Conditioning', 'Water Fountain'],
-          isActive: true
-        },
-        bookedCount: 10,
-        waitlistCount: 1,
-        status: 'scheduled'
-      }
-    ];
+        const mappedClasses: Class[] = classesData.map((c: any) => {
+          const instructor = instructorsMap.get(c.instructor_id);
+          return {
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            instructorId: c.instructor_id,
+            instructor: instructor ? {
+              id: instructor.id,
+              email: instructor.email,
+              firstName: instructor.first_name,
+              lastName: instructor.last_name,
+              role: instructor.role as UserRole,
+              employeeId: instructor.employee_id || '',
+              position: instructor.position || '',
+              department: instructor.department || '',
+              hireDate: new Date(instructor.hire_date || Date.now()),
+              salary: Number(instructor.salary) || 0,
+              schedule: [],
+              certifications: instructor.certifications || [],
+              specializations: instructor.specializations || [],
+              createdAt: new Date(instructor.created_at),
+              updatedAt: new Date(instructor.updated_at)
+            } : undefined,
+            capacity: c.capacity,
+            duration: c.duration,
+            price: c.price,
+            category: c.category,
+            difficulty: c.difficulty,
+            equipment: c.equipment || [],
+            isActive: c.is_active
+          };
+        });
+        
+        setClasses(mappedClasses);
 
-    setClasses(mockClasses);
-    setClassSchedules(mockSchedules);
+        // 2. Fetch Rooms (Skipped as table 'rooms' does not exist yet)
+        // We will use the fallback mock data logic below
+        const roomsData: any[] = [];
+        const roomsMap = new Map();
+
+        /* 
+        const { data: roomsData, error: roomsError } = await supabase
+          .from('rooms')
+          .select('*');
+          
+        const roomsMap = new Map(roomsData?.map((r: any) => [r.id, r]) || []);
+        */
+
+        // 3. Fetch Class Schedules
+        const { data: schedulesData, error: schedulesError } = await supabase
+          .from('class_schedules')
+          .select('*')
+          .gte('date', new Date().toISOString().split('T')[0]); // Only future/today schedules
+
+        if (schedulesError) throw schedulesError;
+
+        const mappedSchedules: ClassSchedule[] = schedulesData.map((s: any) => {
+          const relatedClass = mappedClasses.find(c => c.id === s.class_id);
+          const relatedRoom = roomsMap.get(s.room_id);
+          
+          // Fallback mock room if not found
+          const room = relatedRoom ? {
+             id: relatedRoom.id,
+             name: relatedRoom.name,
+             capacity: relatedRoom.capacity,
+             equipment: relatedRoom.equipment || [],
+             amenities: relatedRoom.amenities || [],
+             isActive: relatedRoom.is_active
+          } : {
+             id: '0',
+             name: 'Main Studio',
+             capacity: 20,
+             isActive: true
+          };
+
+          if (!relatedClass) return null;
+
+          return {
+            id: s.id,
+            classId: s.class_id,
+            class: relatedClass,
+            date: new Date(s.date),
+            startTime: s.start_time,
+            endTime: s.end_time,
+            roomId: s.room_id,
+            room,
+            bookedCount: s.booked_count || 0,
+            waitlistCount: s.waitlist_count || 0,
+            status: s.status
+          };
+        }).filter(Boolean) as ClassSchedule[];
+
+        setClassSchedules(mappedSchedules);
+
+      } catch (error) {
+        console.error('Error fetching class data:', error);
+        toast.error('Failed to load class schedules');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'Beginner':
-        return 'bg-blue-500/10 text-blue-700 border-blue-200';
-      case 'Intermediate':
-        return 'bg-indigo-500/10 text-indigo-700 border-indigo-200';
-      case 'Advanced':
-        return 'bg-violet-500/10 text-violet-700 border-violet-200';
-      default:
-        return 'bg-gray-500/10 text-gray-700 border-gray-200';
-    }
-  };
-
-  const getAvailabilityColor = (schedule: ClassSchedule) => {
-    const availableSpots = schedule.class.capacity - schedule.bookedCount;
-    if (availableSpots === 0) return 'bg-blue-300/10 text-blue-600 border-blue-200';
-    if (availableSpots <= 3) return 'bg-indigo-500/10 text-indigo-700 border-indigo-200';
-    return 'bg-blue-500/10 text-blue-700 border-blue-200';
-  };
-
-  const handleBookClass = (schedule: ClassSchedule) => {
+  const handleBookClass = async (schedule: ClassSchedule) => {
     if (!user) return;
     
-    console.log('Booking class:', schedule.class.name, 'for user:', user.email);
-    setIsBookingDialogOpen(false);
-    
-    // Update local state to reflect the booking
-    setClassSchedules(prev => prev.map(s => 
-      s.id === schedule.id 
-        ? { ...s, bookedCount: s.bookedCount + 1 }
-        : s
-    ));
+    try {
+      // Create booking in Supabase
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          member_id: user.id,
+          class_schedule_id: schedule.id,
+          booking_date: new Date().toISOString(),
+          status: 'CONFIRMED'
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setClassSchedules(prev => prev.map(s => 
+        s.id === schedule.id 
+          ? { ...s, bookedCount: s.bookedCount + 1 }
+          : s
+      ));
+      
+      toast.success('Class booked successfully!');
+      setIsBookingDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error booking class:', error);
+      toast.error(error.message || 'Failed to book class');
+    }
   };
 
   const filteredSchedules = classSchedules.filter(schedule => {
