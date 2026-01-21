@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  UserCheck, 
-  CreditCard, 
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  UserCheck,
+  CreditCard,
   BarChart3,
   Dumbbell,
   LogOut,
@@ -24,6 +24,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+
+import logoIcon from '@/asset/favicon.png';
+import logoFull from '@/asset/gamalog.png';
 
 interface NavItem {
   id: string;
@@ -49,15 +52,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
 
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
-  const toggleCollapse = () => {
-    const newState = !isCollapsed;
-    if (externalCollapsed === undefined) {
-      setInternalCollapsed(newState);
-    }
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(newState));
-    onToggle?.();
-  };
-
   useEffect(() => {
     // Update localStorage when external state changes
     if (externalCollapsed !== undefined) {
@@ -75,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
     { id: 'users', label: 'Users', icon: Users, path: '/users', roles: [UserRole.ADMIN] },
   ];
 
-  const filteredNavItems = navItems.filter(item => 
+  const filteredNavItems = navItems.filter(item =>
     !item.roles || item.roles.some(role => hasRole(role))
   );
 
@@ -96,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
     if (item.id === 'users') {
       return location.pathname === '/users';
     }
-    
+
     if (item.id === 'members' && location.pathname.startsWith('/members/')) {
       return true;
     }
@@ -105,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
       const activeTab = getActiveTab();
       return activeTab === item.id;
     }
-    
+
     return false;
   };
 
@@ -116,43 +110,27 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen border-r border-border/40 bg-white/80 backdrop-blur-xl transition-all duration-300",
+          "fixed left-0 top-0 z-40 h-screen border-r border-[#00bc7d]/10 bg-white/95 backdrop-blur-xl shadow-2xl shadow-[#00bc7d]/5 transition-all duration-300",
           isCollapsed ? "w-20" : "w-64"
         )}
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className={cn(
-            "relative flex h-16 items-center border-b border-border/40 transition-all duration-300",
-            isCollapsed ? "justify-center px-2" : "gap-3 px-6"
-          )}>
+          <div
+            className={cn(
+              "relative flex h-20 items-center transition-all duration-300",
+              isCollapsed ? "justify-center px-2" : "gap-3 px-6"
+            )}
+          >
             {isCollapsed ? (
-              <>
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-br shadow-lg shadow-violet-500/20 flex-shrink-0"
-                >
-                  <Dumbbell className="h-5 w-5 text-white" />
-                </motion.div>
-                <div className="absolute -right-3 top-1/2 -translate-y-1/2 z-10">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={toggleCollapse}
-                    className="p-1.5 rounded-lg bg-white border border-border/40 shadow-md hover:bg-accent transition-colors flex items-center justify-center"
-                  >
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </motion.button>
-                </div>
-              </>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className=""
+              >
+                <img src={logoIcon} alt="GAMA" className="h-20 w-20 object-contain" />
+              </motion.div>
             ) : (
               <>
-                <motion.div
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-br shadow-lg shadow-violet-500/20 flex-shrink-0"
-                >
-                  <Dumbbell className="h-5 w-5 text-white" />
-                </motion.div>
                 <AnimatePresence>
                   <motion.div
                     initial={{ opacity: 0, width: 0 }}
@@ -161,156 +139,133 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden flex-1"
                   >
-                    <h1 className="text-lg font-bold text-brand-gradient whitespace-nowrap">
-                      GymPro
-                    </h1>
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">Management</p>
+                    <img src={logoFull} alt="GAMA Admin Dashboard" className="h-[100px] object-contain" />
                   </motion.div>
                 </AnimatePresence>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={toggleCollapse}
-                  className="p-1.5 rounded-lg hover:bg-accent transition-colors flex-shrink-0 flex items-center justify-center"
-                >
-                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-                </motion.button>
               </>
             )}
           </div>
 
-          {/* Navigation */}
-          <nav className={cn("flex-1 space-y-1 transition-all duration-300", isCollapsed ? "p-2" : "p-4")}>
-            {filteredNavItems.map((item, index) => {
-              const Icon = item.icon;
-              const active = isActive(item);
-              
-              return (
-                <Tooltip key={item.id}>
-                  <TooltipTrigger asChild>
-                    <motion.button
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02, x: isCollapsed ? 0 : 4 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleNavigation(item)}
-                      className={cn(
-                        "relative w-full flex items-center rounded-xl text-sm font-medium transition-all duration-200",
-                        isCollapsed ? "justify-center px-3 py-3" : "gap-3 px-4 py-3",
-                        active
-                          ? "bg-brand-gradient text-white shadow-lg shadow-violet-500/30"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                      )}
-                    >
-                      <Icon className={cn("flex-shrink-0", isCollapsed ? "h-5 w-5" : "h-5 w-5")} />
-                      <AnimatePresence>
-                        {!isCollapsed && (
-                          <motion.span
-                            initial={{ opacity: 0, width: 0 }}
-                            animate={{ opacity: 1, width: 'auto' }}
-                            exit={{ opacity: 0, width: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden whitespace-nowrap"
-                          >
-                            {item.label}
-                          </motion.span>
+          <nav
+            className={cn(
+              "flex-1 transition-all duration-300 overflow-y-auto py-6",
+              isCollapsed ? "px-3" : "px-4"
+            )}
+          >
+            {isCollapsed ? (
+              <div className="flex flex-col items-center gap-3">
+                {filteredNavItems.map((item, index) => {
+                  const Icon = item.icon;
+                  const active = isActive(item);
+
+                  return (
+                    <Tooltip key={item.id}>
+                      <TooltipTrigger asChild>
+                        <motion.button
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleNavigation(item)}
+                          className={cn(
+                            "flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-300",
+                            active
+                              ? "bg-[#00bc7d] text-white shadow-lg shadow-[#00bc7d]/30"
+                              : "text-gray-400 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d]"
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </motion.button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="bg-[#00bc7d] text-white border-[#00bc7d]">
+                        <p>{item.label}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex h-full flex-col">
+                <div className="space-y-2">
+                  {filteredNavItems.map((item, index) => {
+                    const Icon = item.icon;
+                    const active = isActive(item);
+
+                    return (
+                      <motion.button
+                        key={item.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ scale: 1.01, x: 4 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleNavigation(item)}
+                        className={cn(
+                          "group flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300",
+                          active
+                            ? "bg-[#00bc7d]/10 text-[#00bc7d] shadow-sm"
+                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                         )}
-                      </AnimatePresence>
-                      {active && !isCollapsed && (
-                        <motion.div
-                          layoutId="activeTab"
-                          className="absolute right-2 h-2 w-2 rounded-full bg-white"
-                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                        />
-                      )}
-                    </motion.button>
-                  </TooltipTrigger>
-                  {isCollapsed && (
-                    <TooltipContent side="right">
-                      <p>{item.label}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-300",
+                              active
+                                ? "bg-[#00bc7d] text-white shadow-md shadow-[#00bc7d]/20"
+                                : "bg-gray-100 text-gray-500 group-hover:bg-[#00bc7d]/20 group-hover:text-[#00bc7d]"
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <span className={cn("transition-colors", active ? "font-semibold" : "")}>
+                            {item.label}
+                          </span>
+                        </div>
+                        {active && (
+                          <motion.div
+                            layoutId="active-indicator"
+                            className="h-1.5 w-1.5 rounded-full bg-[#00bc7d]"
+                          />
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </nav>
 
-          {/* User Section */}
-          <div className={cn("border-t border-border/40 space-y-2 transition-all duration-300", isCollapsed ? "p-2" : "p-4")}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate('/profile')}
-                  className={cn(
-                    "w-full flex items-center rounded-lg hover:bg-accent transition-colors cursor-pointer",
-                    isCollapsed ? "justify-center px-2 py-2" : "gap-3 px-2 py-2"
-                  )}
-                >
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                    {user?.firstName?.[0]}{user?.lastName?.[0]}
-                  </div>
-                  <AnimatePresence>
-                    {!isCollapsed && (
-                      <motion.div
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: 'auto' }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex-1 min-w-0 overflow-hidden text-left"
-                      >
-                        <p className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.button>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right">
-                  <p>View Profile</p>
-                </TooltipContent>
+          <div
+            className={cn(
+              "border-t border-[#00bc7d]/10 px-4 py-4 flex gap-3 justify-center bg-gray-50/50 backdrop-blur-md",
+              isCollapsed && "flex-col items-center px-2"
+            )}
+          >
+            <Button
+              variant="ghost"
+              size={isCollapsed ? "icon" : "sm"}
+              className={cn(
+                "rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] transition-all",
+                !isCollapsed && "flex-1 justify-start gap-2"
               )}
-            </Tooltip>
-            
-            <div className={cn("flex gap-2", isCollapsed && "flex-col")}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn("h-9 rounded-lg", isCollapsed ? "w-full" : "flex-1")}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                {isCollapsed && (
-                  <TooltipContent side="right">
-                    <p>Settings</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={logout}
-                    className={cn("h-9 rounded-lg text-destructive hover:text-destructive", isCollapsed ? "w-full" : "flex-1")}
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                {isCollapsed && (
-                  <TooltipContent side="right">
-                    <p>Logout</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </div>
+            >
+              <Settings className="h-4 w-4" />
+              {!isCollapsed && <span>Settings</span>}
+            </Button>
+            <Button
+              variant="ghost"
+              size={isCollapsed ? "icon" : "sm"}
+              onClick={logout}
+              className={cn(
+                "rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all",
+                !isCollapsed && "flex-1 justify-start gap-2"
+              )}
+            >
+              <LogOut className="h-4 w-4" />
+              {!isCollapsed && <span>Logout</span>}
+            </Button>
           </div>
         </div>
       </motion.aside>

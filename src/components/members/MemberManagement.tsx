@@ -9,12 +9,22 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Search, 
-  UserPlus, 
+import {
+  Search,
+  UserPlus,
   Eye,
   Users,
   Upload,
@@ -34,6 +44,7 @@ import { useAuth } from '@/hooks/useAuth';
 import BulkUploadModal from './BulkUploadModal';
 import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
 import { toast } from 'sonner';
+import PageLoader from '@/components/ui/PageLoader';
 
 const MemberManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -46,6 +57,8 @@ const MemberManagement: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to convert Supabase member to Member interface
@@ -135,14 +148,18 @@ const MemberManagement: React.FC = () => {
     fetchMembers();
   }, []);
 
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
   const getMembershipColor = (membership: string) => {
     switch (membership) {
       case 'Gym':
-        return 'bg-blue-500/10 text-blue-700 border-blue-200';
+        return 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20';
       case 'Gym + Cardio':
-        return 'bg-cyan-500/10 text-cyan-700 border-cyan-200';
+        return 'bg-teal-500/10 text-teal-700 border-teal-200';
       case 'Gym + Cardio + Crossfit':
-        return 'bg-violet-500/10 text-violet-700 border-violet-200';
+        return 'bg-emerald-600/10 text-emerald-700 border-emerald-200';
       default:
         return 'bg-gray-500/10 text-gray-700 border-gray-200';
     }
@@ -165,7 +182,7 @@ const MemberManagement: React.FC = () => {
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       return age - 1;
     }
@@ -173,13 +190,13 @@ const MemberManagement: React.FC = () => {
   };
 
   const filteredMembers = members.filter(member => {
-    const matchesSearch = 
+    const matchesSearch =
       member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesMembership = selectedMembership === 'all' || member.membershipType === selectedMembership;
-    
+
     return matchesSearch && matchesMembership;
   });
 
@@ -229,16 +246,19 @@ const MemberManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteMember = async (memberId: string) => {
-    if (!window.confirm('Are you sure you want to delete this member?')) {
-      return;
-    }
+  const confirmDelete = (memberId: string) => {
+    setMemberToDelete(memberId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!memberToDelete) return;
 
     try {
       const { error } = await supabase
         .from('members')
         .delete()
-        .eq('id', memberId);
+        .eq('id', memberToDelete);
 
       if (error) {
         console.error('Error deleting member:', error);
@@ -246,8 +266,10 @@ const MemberManagement: React.FC = () => {
         return;
       }
 
-      setMembers(prev => prev.filter(m => m.id !== memberId));
+      setMembers(prev => prev.filter(m => m.id !== memberToDelete));
       toast.success('Member deleted successfully');
+      setIsDeleteDialogOpen(false);
+      setMemberToDelete(null);
     } catch (error) {
       console.error('Error deleting member:', error);
       toast.error('Failed to delete member');
@@ -286,7 +308,7 @@ const MemberManagement: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      
+
       const updatedMember: Member = {
         ...member,
         firstName: formData.firstName,
@@ -318,239 +340,333 @@ const MemberManagement: React.FC = () => {
     };
 
     return (
-      <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Personal Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-firstName">First Name *</Label>
-              <Input
-                id="edit-firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-lastName">Last Name *</Label>
-              <Input
-                id="edit-lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email *</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone">Phone</Label>
-              <Input
-                id="edit-phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-dateOfBirth">Date of Birth *</Label>
-            <Input
-              id="edit-dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-address">Address</Label>
-            <Input
-              id="edit-address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Physical Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-weight">Weight</Label>
-              <div className="flex space-x-2">
-                <Input
-                  id="edit-weight"
-                  type="number"
-                  step="0.1"
-                  value={formData.weight}
-                  onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                  placeholder="70"
-                />
-                <Select value={formData.weightUnit} onValueChange={(value) => setFormData({ ...formData, weightUnit: value as 'kg' | 'lbs' })}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kg">kg</SelectItem>
-                    <SelectItem value="lbs">lbs</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-height">Height</Label>
-              <div className="flex space-x-2">
-                {formData.heightUnit === 'cm' ? (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Personal Information */}
+          <Card className="border-0 shadow-lg shadow-gray-100/50">
+            <CardHeader className="pb-3 border-b border-gray-50 bg-gray-50/30 rounded-t-xl">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <UserPlus className="h-4 w-4 text-[#00bc7d]" />
+                Personal Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 p-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstName" className="text-xs font-medium text-gray-500 uppercase tracking-wide">First Name *</Label>
                   <Input
-                    id="edit-height"
-                    type="number"
-                    value={formData.height}
-                    onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                    placeholder="175"
+                    id="edit-firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    required
+                    className="h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
                   />
-                ) : (
-                  <>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastName" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Name *</Label>
+                  <Input
+                    id="edit-lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    required
+                    className="h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    className="pl-9 h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-phone" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="edit-heightFeet"
-                      type="number"
-                      value={formData.heightFeet}
-                      onChange={(e) => setFormData({ ...formData, heightFeet: e.target.value })}
-                      placeholder="5"
-                      className="w-16"
+                      id="edit-phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="pl-9 h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
                     />
-                    <span className="self-center">ft</span>
-                    <Input
-                      id="edit-heightInches"
-                      type="number"
-                      value={formData.heightInches}
-                      onChange={(e) => setFormData({ ...formData, heightInches: e.target.value })}
-                      placeholder="10"
-                      className="w-16"
-                    />
-                    <span className="self-center">in</span>
-                  </>
-                )}
-                <Select value={formData.heightUnit} onValueChange={(value) => setFormData({ ...formData, heightUnit: value as 'cm' | 'ft' })}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cm">cm</SelectItem>
-                    <SelectItem value="ft">ft</SelectItem>
-                  </SelectContent>
-                </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-dateOfBirth" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Date of Birth *</Label>
+                  <Input
+                    id="edit-dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    required
+                    className="h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-address" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Address</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="edit-address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="pl-9 h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            {/* Membership & Status */}
+            <Card className="border-0 shadow-lg shadow-gray-100/50">
+              <CardHeader className="pb-3 border-b border-gray-50 bg-gray-50/30 rounded-t-xl">
+                <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                  <CreditCard className="h-4 w-4 text-[#00bc7d]" />
+                  Membership & Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 p-5">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-membershipType" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Membership Plan</Label>
+                  <Select value={formData.membershipType} onValueChange={(value) => setFormData({ ...formData, membershipType: value as 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit' })}>
+                    <SelectTrigger className="h-11 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Gym" className="focus:bg-[#00bc7d]/10 focus:text-[#00bc7d]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Gym Only</span>
+                          <Badge variant="outline" className="ml-auto border-[#00bc7d]/20 text-[#00bc7d] bg-[#00bc7d]/5">$39.99</Badge>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="Gym + Cardio" className="focus:bg-[#00bc7d]/10 focus:text-[#00bc7d]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Gym + Cardio</span>
+                          <Badge variant="outline" className="ml-auto border-teal-200 text-teal-700 bg-teal-50">$59.99</Badge>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="Gym + Cardio + Crossfit" className="focus:bg-[#00bc7d]/10 focus:text-[#00bc7d]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Full Package</span>
+                          <Badge variant="outline" className="ml-auto border-emerald-200 text-emerald-700 bg-emerald-50">$89.99</Badge>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Account Status</Label>
+                  <Select value={formData.isActive ? 'active' : 'inactive'} onValueChange={(value) => setFormData({ ...formData, isActive: value === 'active' })}>
+                    <SelectTrigger className={`h-11 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl ${formData.isActive ? 'bg-[#00bc7d]/5 border-[#00bc7d]/30 text-[#00bc7d]' : 'bg-gray-50/50'}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-[#00bc7d] animate-pulse"></span>
+                          Active Member
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="inactive">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-gray-300"></span>
+                          Inactive
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Physical Stats */}
+            <Card className="border-0 shadow-lg shadow-gray-100/50">
+              <CardHeader className="pb-3 border-b border-gray-50 bg-gray-50/30 rounded-t-xl">
+                <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                  <Activity className="h-4 w-4 text-[#00bc7d]" />
+                  Physical Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 p-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-weight" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Weight</Label>
+                    <div className="flex space-x-2">
+                      <Input
+                        id="edit-weight"
+                        type="number"
+                        step="0.1"
+                        value={formData.weight}
+                        onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                        placeholder="70"
+                        className="h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                      />
+                      <Select value={formData.weightUnit} onValueChange={(value) => setFormData({ ...formData, weightUnit: value as 'kg' | 'lbs' })}>
+                        <SelectTrigger className="w-20 h-10 border-gray-200 rounded-xl bg-gray-50/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kg">kg</SelectItem>
+                          <SelectItem value="lbs">lbs</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-height" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Height</Label>
+                    <div className="flex space-x-2">
+                      {formData.heightUnit === 'cm' ? (
+                        <Input
+                          id="edit-height"
+                          type="number"
+                          value={formData.height}
+                          onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                          placeholder="175"
+                          className="h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            id="edit-heightFeet"
+                            type="number"
+                            value={formData.heightFeet}
+                            onChange={(e) => setFormData({ ...formData, heightFeet: e.target.value })}
+                            placeholder="5"
+                            className="w-14 h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                          />
+                          <span className="text-gray-400 text-sm">'</span>
+                          <Input
+                            id="edit-heightInches"
+                            type="number"
+                            value={formData.heightInches}
+                            onChange={(e) => setFormData({ ...formData, heightInches: e.target.value })}
+                            placeholder="10"
+                            className="w-14 h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                          />
+                          <span className="text-gray-400 text-sm">"</span>
+                        </div>
+                      )}
+                      <Select value={formData.heightUnit} onValueChange={(value) => setFormData({ ...formData, heightUnit: value as 'cm' | 'ft' })}>
+                        <SelectTrigger className="w-20 h-10 border-gray-200 rounded-xl bg-gray-50/50">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cm">cm</SelectItem>
+                          <SelectItem value="ft">ft</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Emergency Contact */}
+        <Card className="border-0 shadow-lg shadow-gray-100/50">
+          <CardHeader className="pb-3 border-b border-gray-50 bg-gray-50/30 rounded-t-xl">
+            <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+              <ShieldAlert className="h-4 w-4 text-red-500" />
+              Emergency Contact
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-emergencyName" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Name</Label>
+                <Input
+                  id="edit-emergencyName"
+                  value={formData.emergencyContactName}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                  className="h-10 border-gray-200 focus:border-red-200 focus:ring-red-50 rounded-xl bg-red-50/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-emergencyPhone" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</Label>
+                <Input
+                  id="edit-emergencyPhone"
+                  value={formData.emergencyContactPhone}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+                  className="h-10 border-gray-200 focus:border-red-200 focus:ring-red-50 rounded-xl bg-red-50/10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-emergencyRelationship" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Relationship</Label>
+                <Input
+                  id="edit-emergencyRelationship"
+                  value={formData.emergencyContactRelationship}
+                  onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
+                  className="h-10 border-gray-200 focus:border-red-200 focus:ring-red-50 rounded-xl bg-red-50/10"
+                />
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Membership Information</h3>
-          <div className="space-y-2">
-            <Label htmlFor="edit-membershipType">Membership Type *</Label>
-            <Select value={formData.membershipType} onValueChange={(value) => setFormData({ ...formData, membershipType: value as 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit' })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Gym">Gym - $39.99/month</SelectItem>
-                <SelectItem value="Gym + Cardio">Gym + Cardio - $59.99/month</SelectItem>
-                <SelectItem value="Gym + Cardio + Crossfit">Gym + Cardio + Crossfit - $89.99/month</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-status">Status</Label>
-            <Select value={formData.isActive ? 'active' : 'inactive'} onValueChange={(value) => setFormData({ ...formData, isActive: value === 'active' })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Emergency Contact</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-emergencyName">Name</Label>
-              <Input
-                id="edit-emergencyName"
-                value={formData.emergencyContactName}
-                onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
-              />
+        {/* Additional Info */}
+        <Card className="border-0 shadow-lg shadow-gray-100/50">
+          <CardHeader className="pb-3 border-b border-gray-50 bg-gray-50/30 rounded-t-xl">
+            <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-800">
+              <FileText className="h-4 w-4 text-[#00bc7d]" />
+              Additional Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-fitnessGoals" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Fitness Goals</Label>
+                <Input
+                  id="edit-fitnessGoals"
+                  value={formData.fitnessGoals}
+                  onChange={(e) => setFormData({ ...formData, fitnessGoals: e.target.value })}
+                  placeholder="Weight Loss, Muscle Building"
+                  className="h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-medicalConditions" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Medical Conditions</Label>
+                <Input
+                  id="edit-medicalConditions"
+                  value={formData.medicalConditions}
+                  onChange={(e) => setFormData({ ...formData, medicalConditions: e.target.value })}
+                  placeholder="None, Knee Injury"
+                  className="h-10 border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-emergencyPhone">Phone</Label>
-              <Input
-                id="edit-emergencyPhone"
-                value={formData.emergencyContactPhone}
-                onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+              <Label htmlFor="edit-notes" className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes</Label>
+              <Textarea
+                id="edit-notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={3}
+                className="min-h-[80px] border-gray-200 focus:border-[#00bc7d] focus:ring-[#00bc7d]/20 rounded-xl bg-gray-50/50 resize-none"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-emergencyRelationship">Relationship</Label>
-              <Input
-                id="edit-emergencyRelationship"
-                value={formData.emergencyContactRelationship}
-                onChange={(e) => setFormData({ ...formData, emergencyContactRelationship: e.target.value })}
-              />
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Additional Information</h3>
-          <div className="space-y-2">
-            <Label htmlFor="edit-fitnessGoals">Fitness Goals (comma-separated)</Label>
-            <Input
-              id="edit-fitnessGoals"
-              value={formData.fitnessGoals}
-              onChange={(e) => setFormData({ ...formData, fitnessGoals: e.target.value })}
-              placeholder="Weight Loss, Muscle Building"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-medicalConditions">Medical Conditions (comma-separated)</Label>
-            <Input
-              id="edit-medicalConditions"
-              value={formData.medicalConditions}
-              onChange={(e) => setFormData({ ...formData, medicalConditions: e.target.value })}
-              placeholder="None, Knee Injury"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-notes">Notes</Label>
-            <Textarea
-              id="edit-notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={3}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-2 pt-4 border-t">
+        <div className="flex justify-end items-center gap-3 pt-4 border-t border-gray-100">
           <Button type="button" variant="outline" onClick={() => {
             setIsEditDialogOpen(false);
             setEditingMember(null);
-          }}>
+          }} className="h-11 rounded-xl border-gray-200 hover:bg-gray-50 hover:text-gray-900 px-6">
             Cancel
           </Button>
-          <Button type="submit" variant="brand">
+          <Button type="submit" className="h-11 rounded-xl bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-lg shadow-[#00bc7d]/20 px-8">
             Update Member
           </Button>
         </div>
@@ -561,44 +677,44 @@ const MemberManagement: React.FC = () => {
   const ViewMemberDialog = ({ member }: { member: Member }) => (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/5 via-blue-500/5 to-cyan-500/5 p-6 border border-white/20">
+      <div className="relative overflow-hidden rounded-3xl bg-[#00bc7d] p-8 shadow-xl shadow-[#00bc7d]/20">
         <div className="absolute top-0 right-0 p-4 opacity-10">
-          <Sparkles className="h-24 w-24 text-violet-500" />
+          <Sparkles className="h-32 w-32 text-white" />
         </div>
-        
-        <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6">
-          <motion.div 
+
+        <div className="relative flex flex-col md:flex-row items-center md:items-start gap-8">
+          <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-full blur-lg opacity-20" />
-            <Avatar className="h-24 w-24 ring-4 ring-white shadow-xl">
+            <div className="absolute inset-0 bg-white rounded-full blur-xl opacity-20" />
+            <Avatar className="h-28 w-28 ring-4 ring-white/30 shadow-2xl">
               <AvatarImage src={member.avatar} />
-              <AvatarFallback className="bg-gradient-to-br from-violet-500 to-blue-500 text-white text-3xl font-bold">
+              <AvatarFallback className="bg-white text-[#00bc7d] text-3xl font-bold">
                 {member.firstName[0]}{member.lastName[0]}
               </AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-2 -right-2">
-               <Badge className={`${member.isActive ? 'bg-green-500' : 'bg-gray-500'} text-white border-2 border-white shadow-sm`}>
+              <Badge className={`${member.isActive ? 'bg-white text-[#00bc7d]' : 'bg-gray-200 text-gray-500'} border-4 border-[#00bc7d] shadow-sm`}>
                 {member.isActive ? 'Active' : 'Inactive'}
               </Badge>
             </div>
           </motion.div>
-          
-          <div className="text-center md:text-left space-y-2 flex-1">
+
+          <div className="text-center md:text-left space-y-3 flex-1 text-white">
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">{member.firstName} {member.lastName}</h3>
-              <p className="text-muted-foreground flex items-center justify-center md:justify-start gap-2">
+              <h3 className="text-3xl font-bold">{member.firstName} {member.lastName}</h3>
+              <p className="text-white/80 flex items-center justify-center md:justify-start gap-2 text-lg">
                 <Mail className="h-4 w-4" /> {member.email}
               </p>
             </div>
-            
+
             <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-2">
-              <Badge variant="secondary" className="bg-white/50 backdrop-blur-sm border-gray-200/50">
-                ID: {member.id.slice(0, 8)}...
+              <Badge variant="secondary" className="bg-white/20 backdrop-blur-md border-white/10 text-white hover:bg-white/30">
+                ID: {member.id.slice(0, 8)}
               </Badge>
-              <Badge className={`${getMembershipColor(member.membershipType)} border`}>
+              <Badge className="bg-white text-[#00bc7d] border-none shadow-sm hover:bg-white/90">
                 {member.membershipType}
               </Badge>
             </div>
@@ -611,7 +727,7 @@ const MemberManagement: React.FC = () => {
         <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white/50 backdrop-blur-xl">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-violet-500" />
+              <UserPlus className="h-5 w-5 text-[#00bc7d]" />
               Personal Details
             </CardTitle>
           </CardHeader>
@@ -638,7 +754,7 @@ const MemberManagement: React.FC = () => {
               <div className="space-y-1">
                 <p className="text-muted-foreground text-xs uppercase tracking-wider">Height</p>
                 <p className="font-medium">
-                  {member.height 
+                  {member.height
                     ? (member.heightUnit === 'cm' ? `${member.height} cm` : `${member.heightFeet}'${member.heightInches}"`)
                     : 'N/A'}
                 </p>
@@ -658,7 +774,7 @@ const MemberManagement: React.FC = () => {
         <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white/50 backdrop-blur-xl">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-blue-500" />
+              <CreditCard className="h-5 w-5 text-[#00bc7d]" />
               Membership Info
             </CardTitle>
           </CardHeader>
@@ -666,14 +782,14 @@ const MemberManagement: React.FC = () => {
             <div className="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Current Plan</span>
-                <span className="font-semibold text-violet-700">{member.membershipType}</span>
+                <span className="font-semibold text-[#00bc7d]">{member.membershipType}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Monthly Fee</span>
                 <span className="font-bold text-lg">${getMembershipPrice(member.membershipType)}</span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="space-y-1">
                 <p className="text-muted-foreground text-xs uppercase tracking-wider">Start Date</p>
@@ -691,13 +807,13 @@ const MemberManagement: React.FC = () => {
         <Card className="md:col-span-2 border-0 shadow-lg shadow-gray-100/50 bg-white/50 backdrop-blur-xl">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Activity className="h-5 w-5 text-pink-500" />
+              <Activity className="h-5 w-5 text-[#00bc7d]" />
               Health & Emergency
             </CardTitle>
           </CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
-               {member.emergencyContact && (
+              {member.emergencyContact && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     <ShieldAlert className="h-4 w-4 text-red-500" />
@@ -718,20 +834,20 @@ const MemberManagement: React.FC = () => {
                   <h4 className="text-sm font-semibold text-gray-900">Fitness Goals</h4>
                   <div className="flex flex-wrap gap-2">
                     {member.fitnessGoals.map((goal, i) => (
-                      <Badge key={i} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Badge key={i} variant="outline" className="bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20">
                         {goal}
                       </Badge>
                     ))}
                   </div>
                 </div>
               )}
-              
+
               {member.medicalConditions && member.medicalConditions.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-gray-900">Medical Conditions</h4>
                   <div className="flex flex-wrap gap-2">
                     {member.medicalConditions.map((condition, i) => (
-                      <Badge key={i} variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                      <Badge key={i} variant="outline" className="bg-red-50 text-red-700 border-red-200">
                         {condition}
                       </Badge>
                     ))}
@@ -741,15 +857,15 @@ const MemberManagement: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         {member.notes && (
-          <Card className="md:col-span-2 border-0 shadow-lg shadow-gray-100/50 bg-amber-50/50 backdrop-blur-xl border-amber-100/50">
-             <CardContent className="p-4">
-                <h4 className="text-sm font-semibold text-amber-900 mb-1 flex items-center gap-2">
-                  <FileText className="h-4 w-4" /> Notes
-                </h4>
-                <p className="text-sm text-amber-800/80 italic">{member.notes}</p>
-             </CardContent>
+          <Card className="md:col-span-2 border-0 shadow-lg shadow-gray-100/50 bg-amber-50/30 backdrop-blur-xl border-amber-100/50">
+            <CardContent className="p-4">
+              <h4 className="text-sm font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Notes
+              </h4>
+              <p className="text-sm text-amber-900/80 italic">{member.notes}</p>
+            </CardContent>
           </Card>
         )}
       </div>
@@ -766,20 +882,20 @@ const MemberManagement: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-violet-600" />
+          <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+            <Sparkles className="h-8 w-8 text-[#00bc7d]" />
             Member Management
           </h2>
-          <p className="text-muted-foreground">Manage gym members and their information</p>
+          <p className="text-gray-500 text-lg mt-2">Manage your gym members, memberships, and more.</p>
         </div>
         <div className="flex gap-3">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsBulkUploadOpen(true)}
-              className="rounded-full border-2 h-11 px-6"
+              className="rounded-xl border-gray-200 hover:border-[#00bc7d] hover:text-[#00bc7d] h-12 px-6"
             >
               <Upload className="h-4 w-4 mr-2" />
               Bulk Upload
@@ -787,8 +903,7 @@ const MemberManagement: React.FC = () => {
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
-              variant="brand"
-              className="rounded-full h-11 px-6 shadow-lg"
+              className="rounded-xl h-12 px-6 shadow-lg shadow-[#00bc7d]/20 bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white"
               onClick={() => navigate('/members/new')}
             >
               <UserPlus className="h-4 w-4 mr-2" />
@@ -798,15 +913,13 @@ const MemberManagement: React.FC = () => {
         </div>
       </div>
 
-
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: 'Total Members', value: stats.totalMembers, icon: Users, gradient: 'from-violet-500 to-blue-500', delay: 0.1 },
-          { label: 'Active', value: stats.activeMembers, icon: Users, gradient: 'from-blue-500 to-cyan-500', delay: 0.2 },
-          { label: 'Gym', value: stats.gymMembers, icon: Users, gradient: 'from-blue-500 to-indigo-500', delay: 0.3 },
-          { label: 'Gym + Cardio', value: stats.gymCardioMembers, icon: Users, gradient: 'from-cyan-500 to-blue-500', delay: 0.4 },
-          { label: 'Full Package', value: stats.fullMembers, icon: Users, gradient: 'from-violet-500 to-indigo-500', delay: 0.5 },
+          { label: 'Total Members', value: stats.totalMembers, icon: Users, color: 'bg-[#00bc7d]', text: 'text-[#00bc7d]', delay: 0.1 },
+          { label: 'Active', value: stats.activeMembers, icon: Activity, color: 'bg-emerald-500', text: 'text-emerald-500', delay: 0.2 },
+          { label: 'Gym', value: stats.gymMembers, icon: Users, color: 'bg-teal-500', text: 'text-teal-500', delay: 0.3 },
+          { label: 'Gym + Cardio', value: stats.gymCardioMembers, icon: Users, color: 'bg-cyan-500', text: 'text-cyan-500', delay: 0.4 },
+          { label: 'Full Package', value: stats.fullMembers, icon: Users, color: 'bg-green-600', text: 'text-green-600', delay: 0.5 },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -814,20 +927,17 @@ const MemberManagement: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: stat.delay }}
             whileHover={{ scale: 1.02, y: -4 }}
-            className="group relative overflow-hidden rounded-2xl bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 p-6 transition-all duration-300"
+            className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
-            <div className="relative">
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
-                  <stat.icon className="h-5 w-5 text-white" />
-                </div>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`p-3 rounded-xl ${stat.color} bg-opacity-10`}>
+                <stat.icon className={`h-6 w-6 ${stat.text}`} />
               </div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">{stat.label}</h3>
-              <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                {stat.value}
-              </p>
             </div>
+            <h3 className="text-sm font-medium text-gray-500 mb-1">{stat.label}</h3>
+            <p className="text-3xl font-bold text-gray-900">
+              {stat.value}
+            </p>
           </motion.div>
         ))}
       </div>
@@ -836,130 +946,142 @@ const MemberManagement: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="rounded-2xl bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 overflow-hidden"
+        className="rounded-3xl bg-white shadow-2xl shadow-gray-100/50 border border-gray-100 overflow-hidden"
       >
-        <CardHeader className="bg-gradient-to-r from-white/80 to-white/40 border-b border-border/40">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-violet-600" />
-            Members Directory
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search members..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 rounded-full border-2 h-11 bg-white/50"
-                />
-              </div>
+        <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-white to-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#00bc7d]/10 rounded-xl border border-[#00bc7d]/10">
+              <Users className="h-6 w-6 text-[#00bc7d]" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Members Directory</h3>
+              <p className="text-sm text-gray-500">Manage and view all your gym members</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <div className="relative flex-1 sm:min-w-[320px] group">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-[#00bc7d] transition-colors" />
+              <Input
+                placeholder="Search members by name, email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-11 rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] transition-all shadow-sm"
+              />
             </div>
             <Select value={selectedMembership} onValueChange={setSelectedMembership}>
-              <SelectTrigger className="w-48 rounded-full border-2 h-11 bg-white/50">
-                <SelectValue placeholder="Filter by membership" />
+              <SelectTrigger className="w-full sm:w-[200px] rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] shadow-sm">
+                <SelectValue placeholder="Filter by plan" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Memberships</SelectItem>
-                <SelectItem value="Gym">Gym</SelectItem>
+                <SelectItem value="Gym">Gym Only</SelectItem>
                 <SelectItem value="Gym + Cardio">Gym + Cardio</SelectItem>
-                <SelectItem value="Gym + Cardio + Crossfit">Gym + Cardio + Crossfit</SelectItem>
+                <SelectItem value="Gym + Cardio + Crossfit">Full Package</SelectItem>
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          <div className="rounded-xl border border-border/40 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-gradient-to-r from-gray-50/50 to-white/50">
-                <TableRow className="border-border/40">
-                  <TableHead className="font-semibold">Member</TableHead>
-                  <TableHead className="font-semibold">Membership</TableHead>
-                  <TableHead className="font-semibold">Age</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-gray-50/80 backdrop-blur-sm">
+              <TableRow className="border-gray-100 hover:bg-transparent">
+                <TableHead className="w-[300px] font-semibold text-gray-500 py-5 pl-8 text-xs uppercase tracking-wider">Member</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Membership Details</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Join Date</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Status</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-right pr-8 text-xs uppercase tracking-wider">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-16">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#00bc7d]"></div>
+                      <span className="mt-4 text-gray-500 font-medium">Loading members...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
-                        <span className="ml-3 text-muted-foreground">Loading members...</span>
+              ) : filteredMembers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-16 text-gray-500">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
+                        <Users className="h-8 w-8 text-gray-400" />
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredMembers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No members found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredMembers.map((member, index) => (
+                      <p className="text-lg font-medium text-gray-900">No members found</p>
+                      <p className="text-sm text-gray-500">Try adjusting your search or filters to find who you're looking for.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredMembers.map((member, index) => (
                   <motion.tr
                     key={member.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="border-border/40 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-blue-50/50 transition-colors"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="border-gray-50 hover:bg-[#00bc7d]/[0.02] transition-colors group"
                   >
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="ring-2 ring-violet-500/20">
-                          <AvatarImage src={member.avatar} />
-                          <AvatarFallback className="bg-gradient-to-br from-violet-500 to-blue-500 text-white">
-                            {member.firstName[0]}{member.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
+                    <TableCell className="py-5 pl-8">
+                      <div className="flex items-center space-x-4">
+                        <div className="relative">
+                          <Avatar className="h-12 w-12 ring-2 ring-white shadow-md group-hover:ring-[#00bc7d]/20 transition-all">
+                            <AvatarImage src={member.avatar} />
+                            <AvatarFallback className="bg-gradient-to-br from-[#00bc7d] to-[#009664] text-white font-bold text-lg">
+                              {member.firstName[0]}{member.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${member.isActive ? 'bg-[#00bc7d]' : 'bg-gray-300'}`}></span>
+                        </div>
                         <div>
-                          <div className="font-medium">
+                          <div className="font-bold text-gray-900 text-base group-hover:text-[#00bc7d] transition-colors">
                             {member.firstName} {member.lastName}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-gray-500 flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
                             {member.email}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div>
-                        <Badge className={`${getMembershipColor(member.membershipType)} border rounded-full px-3 py-1`}>
+                    <TableCell className="py-5">
+                      <div className="flex flex-col gap-1.5">
+                        <Badge variant="outline" className={`${getMembershipColor(member.membershipType)} border-0 font-medium w-fit px-2.5 py-0.5 rounded-lg shadow-sm`}>
                           {member.membershipType}
                         </Badge>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          ${getMembershipPrice(member.membershipType)}/month
+                        <span className="text-xs text-gray-500 font-medium ml-1">
+                          ${getMembershipPrice(member.membershipType)}/mo
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="text-gray-900 font-medium flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                          {member.membershipStartDate.toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {calculateAge(member.dateOfBirth)} years old
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{calculateAge(member.dateOfBirth)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {member.dateOfBirth.toLocaleDateString()}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={member.isActive ? 'default' : 'secondary'}
-                        className={`rounded-full ${member.isActive ? 'bg-blue-500/10 text-blue-700 border-blue-200' : 'bg-gray-500/10 text-gray-700 border-gray-200'}`}
-                      >
+                    <TableCell className="py-5">
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${member.isActive ? 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${member.isActive ? 'bg-[#00bc7d] animate-pulse' : 'bg-gray-400'}`}></span>
                         {member.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
+                      </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
+                    <TableCell className="py-5 text-right pr-8">
+                      <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMember(member);
-                            setIsViewDialogOpen(true);
-                          }}
-                          className="rounded-full"
+                          size="icon"
+                          onClick={() => navigate(`/members/${member.id}`)}
+                          className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] hover:scale-105 transition-all"
+                          title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -967,17 +1089,19 @@ const MemberManagement: React.FC = () => {
                           <>
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               onClick={() => navigate(`/members/${member.id}/edit`)}
-                              className="rounded-full"
+                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] hover:scale-105 transition-all"
+                              title="Edit Member"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteMember(member.id)}
-                              className="rounded-full"
+                              size="icon"
+                              onClick={() => confirmDelete(member.id)}
+                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-600 hover:scale-105 transition-all"
+                              title="Delete Member"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -986,12 +1110,11 @@ const MemberManagement: React.FC = () => {
                       </div>
                     </TableCell>
                   </motion.tr>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </motion.div>
 
       <BulkUploadModal
@@ -1013,17 +1136,45 @@ const MemberManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {isEditDialogOpen && editingMember && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Edit Member</CardTitle>
-            <CardDescription>Update member information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EditMemberForm member={editingMember} />
-          </CardContent>
-        </Card>
-      )}
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <Edit className="h-6 w-6 text-[#00bc7d]" />
+              Edit Member
+            </DialogTitle>
+            <DialogDescription>
+              Update {editingMember?.firstName}'s information
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto py-4 px-1">
+            {editingMember && <EditMemberForm member={editingMember} />}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-gray-900">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-500">
+              This action cannot be undone. This will permanently delete the member
+              and remove their data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeDelete}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-lg shadow-red-500/20"
+            >
+              Delete Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

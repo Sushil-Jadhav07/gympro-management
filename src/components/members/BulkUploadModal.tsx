@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Member, UserRole } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,12 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Upload, 
-  Download, 
-  FileText, 
-  CheckCircle, 
-  AlertTriangle, 
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
   X,
   FileSpreadsheet
 } from 'lucide-react';
@@ -59,8 +58,8 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
   ];
 
   const headers = [
-    'First Name', 'Last Name', 'Email', 'Phone', 'Date of Birth', 'Address', 
-    'Weight', 'Weight Unit', 'Height', 'Height Unit', 'Membership Type', 
+    'First Name', 'Last Name', 'Email', 'Phone', 'Date of Birth', 'Address',
+    'Weight', 'Weight Unit', 'Height', 'Height Unit', 'Membership Type',
     'Medical Conditions', 'Fitness Goals', 'Notes'
   ];
 
@@ -102,12 +101,12 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
 
   const validateMemberData = (data: string[]): { member: ParsedMember; isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
-    
+
     // Required fields validation
     if (!data[0] || !data[0].trim()) errors.push('First Name is required');
     if (!data[1] || !data[1].trim()) errors.push('Last Name is required');
     if (!data[2] || !data[2].trim()) errors.push('Email is required');
-    
+
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (data[2] && !emailRegex.test(data[2])) {
@@ -160,17 +159,17 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
   const parseCSV = (text: string): ParsedMember[] => {
     const lines = text.split('\n').filter(line => line.trim());
     const members: ParsedMember[] = [];
-    
+
     // Skip header row
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
       if (!line.trim()) continue;
-      
+
       // Simple CSV parsing (handles quoted fields)
       const fields: string[] = [];
       let current = '';
       let inQuotes = false;
-      
+
       for (let j = 0; j < line.length; j++) {
         const char = line[j];
         if (char === '"') {
@@ -183,11 +182,11 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
         }
       }
       fields.push(current); // Add the last field
-      
+
       const { member } = validateMemberData(fields);
       members.push(member);
     }
-    
+
     return members;
   };
 
@@ -214,7 +213,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        
+
         // Simulate progress
         const progressInterval = setInterval(() => {
           setUploadProgress(prev => {
@@ -273,7 +272,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
 
   const processImport = () => {
     const validMembers = parsedMembers.filter(m => m.isValid);
-    
+
     const members: Member[] = validMembers.map((parsedMember, index) => ({
       id: `bulk_${Date.now()}_${index}`,
       email: parsedMember.email,
@@ -325,7 +324,10 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Bulk Upload Members</DialogTitle>
+          <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+            <Upload className="h-6 w-6 text-[#00bc7d]" />
+            Bulk Upload Members
+          </DialogTitle>
           <DialogDescription>
             Upload multiple members at once using CSV or Excel files
           </DialogDescription>
@@ -335,13 +337,13 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
           <div className="space-y-6">
             {/* Sample Format Download */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Download Sample Format</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Download Sample Format</h3>
               <div className="flex space-x-4">
-                <Button variant="outline" onClick={downloadSampleCSV}>
+                <Button variant="outline" onClick={downloadSampleCSV} className="border-gray-200 hover:border-[#00bc7d] hover:text-[#00bc7d]">
                   <FileText className="h-4 w-4 mr-2" />
                   Download CSV Sample
                 </Button>
-                <Button variant="outline" onClick={downloadSampleExcel}>
+                <Button variant="outline" onClick={downloadSampleExcel} className="border-gray-200 hover:border-[#00bc7d] hover:text-[#00bc7d]">
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
                   Download Excel Sample
                 </Button>
@@ -353,8 +355,8 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
 
             {/* File Upload Area */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Upload File</h3>
-              
+              <h3 className="text-lg font-semibold text-gray-900">Upload File</h3>
+
               {errors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
@@ -367,22 +369,23 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
               )}
 
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  dragActive 
-                    ? 'border-primary bg-primary/10' 
-                    : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-                }`}
+                className={`border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 ${dragActive
+                    ? 'border-[#00bc7d] bg-[#00bc7d]/5 scale-[1.02]'
+                    : 'border-gray-200 hover:border-[#00bc7d]/50 hover:bg-gray-50'
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <div className="w-16 h-16 bg-[#00bc7d]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Upload className="h-8 w-8 text-[#00bc7d]" />
+                </div>
                 <div className="space-y-2">
-                  <p className="text-lg font-medium">
+                  <p className="text-xl font-semibold text-gray-900">
                     {dragActive ? 'Drop your file here' : 'Drag and drop your file here'}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-500">
                     or click to browse files
                   </p>
                   <Input
@@ -392,23 +395,23 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
                     className="hidden"
                     id="file-upload"
                   />
-                  <Label htmlFor="file-upload" className="cursor-pointer">
-                    <Button variant="outline" asChild>
-                      <span>Choose File</span>
-                    </Button>
+                  <Label htmlFor="file-upload" className="cursor-pointer inline-block mt-2">
+                    <div className="inline-flex h-10 items-center justify-center rounded-xl bg-[#00bc7d] px-8 text-sm font-medium text-white transition-colors hover:bg-[#00bc7d]/90 shadow-lg shadow-[#00bc7d]/20">
+                      Choose File
+                    </div>
                   </Label>
                 </div>
-                <p className="text-xs text-muted-foreground mt-4">
+                <p className="text-xs text-gray-400 mt-6">
                   Supported formats: CSV, Excel (.xlsx, .xls)
                 </p>
               </div>
 
               {file && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Selected file: {file.name}</p>
+                  <p className="text-sm font-medium text-[#00bc7d]">Selected file: {file.name}</p>
                   {uploading && (
                     <div className="space-y-2">
-                      <Progress value={uploadProgress} className="w-full" />
+                      <Progress value={uploadProgress} className="w-full h-2 bg-gray-100" />
                       <p className="text-sm text-muted-foreground">
                         Processing file... {uploadProgress}%
                       </p>
@@ -419,15 +422,18 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
             </div>
 
             {/* Instructions */}
-            <div className="space-y-2">
-              <h4 className="font-medium">File Requirements:</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• First row should contain column headers</li>
-                <li>• Required columns: First Name, Last Name, Email</li>
-                <li>• Date format: YYYY-MM-DD (e.g., 1990-05-15)</li>
-                <li>• Membership types: Gym, Gym + Cardio, Gym + Cardio + Crossfit</li>
-                <li>• Weight units: kg or lbs</li>
-                <li>• Height units: cm or ft</li>
+            <div className="space-y-3 bg-gray-50 p-5 rounded-xl border border-gray-100">
+              <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-[#00bc7d]" />
+                File Requirements
+              </h4>
+              <ul className="text-sm text-gray-600 space-y-1.5 ml-1">
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#00bc7d]"></div> First row should contain column headers</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#00bc7d]"></div> Required columns: First Name, Last Name, Email</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#00bc7d]"></div> Date format: YYYY-MM-DD (e.g., 1990-05-15)</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#00bc7d]"></div> Membership types: Gym, Gym + Cardio, Gym + Cardio + Crossfit</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#00bc7d]"></div> Weight units: kg or lbs</li>
+                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-[#00bc7d]"></div> Height units: cm or ft</li>
               </ul>
             </div>
           </div>
@@ -435,7 +441,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Import Preview</h3>
-              <Button variant="outline" onClick={() => setShowPreview(false)}>
+              <Button variant="outline" onClick={() => setShowPreview(false)} className="border-gray-200 hover:bg-gray-50">
                 <X className="h-4 w-4 mr-2" />
                 Back to Upload
               </Button>
@@ -443,35 +449,41 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
 
             {/* Summary */}
             <div className="grid grid-cols-3 gap-4">
-              <Card>
+              <Card className="border-0 shadow-lg shadow-gray-100/50">
                 <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-[#00bc7d]/10 rounded-xl">
+                      <CheckCircle className="h-6 w-6 text-[#00bc7d]" />
+                    </div>
                     <div>
-                      <p className="text-2xl font-bold text-blue-600">{validMembers.length}</p>
-                      <p className="text-sm text-muted-foreground">Valid Records</p>
+                      <p className="text-3xl font-bold text-[#00bc7d]">{validMembers.length}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Valid Records</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-0 shadow-lg shadow-gray-100/50">
                 <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-5 w-5 text-indigo-600" />
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-red-50 rounded-xl">
+                      <AlertTriangle className="h-6 w-6 text-red-500" />
+                    </div>
                     <div>
-                      <p className="text-2xl font-bold text-indigo-600">{invalidMembers.length}</p>
-                      <p className="text-sm text-muted-foreground">Invalid Records</p>
+                      <p className="text-3xl font-bold text-red-500">{invalidMembers.length}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Invalid Records</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-0 shadow-lg shadow-gray-100/50">
                 <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-cyan-50 rounded-xl">
+                      <FileText className="h-6 w-6 text-cyan-600" />
+                    </div>
                     <div>
-                      <p className="text-2xl font-bold text-blue-600">{parsedMembers.length}</p>
-                      <p className="text-sm text-muted-foreground">Total Records</p>
+                      <p className="text-3xl font-bold text-cyan-600">{parsedMembers.length}</p>
+                      <p className="text-sm text-muted-foreground font-medium">Total Records</p>
                     </div>
                   </div>
                 </CardContent>
@@ -481,9 +493,9 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
             {/* Preview Table */}
             <div className="space-y-4">
               <h4 className="font-medium">Preview Data</h4>
-              <div className="max-h-96 overflow-y-auto border rounded-lg">
+              <div className="max-h-96 overflow-y-auto border border-gray-100 rounded-xl shadow-sm">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-gray-50">
                     <TableRow>
                       <TableHead>Status</TableHead>
                       <TableHead>Name</TableHead>
@@ -494,26 +506,26 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
                   </TableHeader>
                   <TableBody>
                     {parsedMembers.map((member, index) => (
-                      <TableRow key={index}>
+                      <TableRow key={index} className="hover:bg-gray-50/50">
                         <TableCell>
                           {member.isValid ? (
-                            <Badge className="bg-blue-100 text-blue-800">
+                            <Badge className="bg-[#00bc7d]/10 text-[#00bc7d] hover:bg-[#00bc7d]/20 border-0">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Valid
                             </Badge>
                           ) : (
-                            <Badge variant="destructive">
+                            <Badge variant="destructive" className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100 shadow-none">
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               Invalid
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell>{member.firstName} {member.lastName}</TableCell>
-                        <TableCell>{member.email}</TableCell>
+                        <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
+                        <TableCell className="text-gray-500">{member.email}</TableCell>
                         <TableCell>{member.membershipType}</TableCell>
                         <TableCell>
                           {member.errors.length > 0 && (
-                            <div className="text-sm text-indigo-600">
+                            <div className="text-sm text-red-500 font-medium">
                               {member.errors.join(', ')}
                             </div>
                           )}
@@ -526,13 +538,14 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({ isOpen, onClose, onMe
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={handleClose}>
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+              <Button variant="outline" onClick={handleClose} className="rounded-xl h-11 border-gray-200">
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={processImport}
                 disabled={validMembers.length === 0}
+                className="bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white rounded-xl h-11 px-8 shadow-lg shadow-[#00bc7d]/20"
               >
                 Import {validMembers.length} Valid Members
               </Button>

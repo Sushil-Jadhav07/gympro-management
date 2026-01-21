@@ -7,18 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  UserPlus, 
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  UserPlus,
   Calendar,
   Phone,
   Mail,
@@ -31,6 +30,9 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
+import { DialogHeader } from '../ui/dialog';
+import PageLoader from '../ui/PageLoader';
 
 type SupabaseStaffRow = {
   id: string;
@@ -112,14 +114,18 @@ const StaffManagement: React.FC = () => {
     fetchStaff();
   }, []);
 
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
   const getDepartmentColor = (department: string) => {
     switch (department) {
       case 'Fitness':
-        return 'bg-blue-500/10 text-blue-700 border-blue-200';
+        return 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20';
       case 'Operations':
-        return 'bg-cyan-500/10 text-cyan-700 border-cyan-200';
+        return 'bg-blue-500/10 text-blue-700 border-blue-200';
       case 'Management':
-        return 'bg-violet-500/10 text-violet-700 border-violet-200';
+        return 'bg-purple-500/10 text-purple-700 border-purple-200';
       default:
         return 'bg-gray-500/10 text-gray-700 border-gray-200';
     }
@@ -128,11 +134,11 @@ const StaffManagement: React.FC = () => {
   const getRoleColor = (role: UserRole) => {
     switch (role) {
       case UserRole.TRAINER:
-        return 'bg-blue-500/10 text-blue-700 border-blue-200';
+        return 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20';
       case UserRole.STAFF:
-        return 'bg-indigo-500/10 text-indigo-700 border-indigo-200';
+        return 'bg-blue-500/10 text-blue-700 border-blue-200';
       case UserRole.MANAGER:
-        return 'bg-violet-500/10 text-violet-700 border-violet-200';
+        return 'bg-purple-500/10 text-purple-700 border-purple-200';
       default:
         return 'bg-gray-500/10 text-gray-700 border-gray-200';
     }
@@ -143,15 +149,26 @@ const StaffManagement: React.FC = () => {
     return days[dayOfWeek];
   };
 
+  const calculateTenure = (hireDate: Date) => {
+    const today = new Date();
+    const years = today.getFullYear() - hireDate.getFullYear();
+    const monthDiff = today.getMonth() - hireDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < hireDate.getDate())) {
+      return years - 1;
+    }
+    return years;
+  };
+
   const filteredStaff = staff.filter(member => {
-    const matchesSearch = 
+    const matchesSearch =
       member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesDepartment = selectedDepartment === 'all' || member.department === selectedDepartment;
-    
+
     return matchesSearch && matchesDepartment;
   });
 
@@ -180,102 +197,14 @@ const StaffManagement: React.FC = () => {
     }
   };
 
-  const StaffDetailsDialog = ({ staff: staffMember }: { staff: Staff }) => (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Avatar className="h-16 w-16">
-          <AvatarImage src={staffMember.avatar} />
-          <AvatarFallback>{staffMember.firstName[0]}{staffMember.lastName[0]}</AvatarFallback>
-        </Avatar>
-        <div>
-          <h3 className="text-lg font-semibold">{staffMember.firstName} {staffMember.lastName}</h3>
-          <p className="text-sm text-muted-foreground">Employee ID: {staffMember.employeeId}</p>
-          <div className="flex space-x-2 mt-2">
-            <Badge className={getRoleColor(staffMember.role)}>
-              {staffMember.role}
-            </Badge>
-            <Badge className={getDepartmentColor(staffMember.department)}>
-              {staffMember.department}
-            </Badge>
-          </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Contact Information</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{staffMember.email}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{staffMember.phone}</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-2">Employment Details</h4>
-            <div className="space-y-2 text-sm">
-              <p><strong>Position:</strong> {staffMember.position}</p>
-              <p><strong>Department:</strong> {staffMember.department}</p>
-              <p><strong>Hire Date:</strong> {staffMember.hireDate.toLocaleDateString()}</p>
-              <p><strong>Salary:</strong> ${staffMember.salary.toLocaleString()}/year</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Schedule</h4>
-            <div className="space-y-1 text-sm">
-              {staffMember.schedule.filter(s => s.isActive).map((schedule, index) => (
-                <p key={index}>
-                  <strong>{getDayName(schedule.dayOfWeek)}:</strong> {schedule.startTime} - {schedule.endTime}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          {staffMember.certifications && staffMember.certifications.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2">Certifications</h4>
-              <div className="flex flex-wrap gap-1">
-                {staffMember.certifications.map((cert, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {cert}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {staffMember.specializations && staffMember.specializations.length > 0 && (
-            <div>
-              <h4 className="font-medium mb-2">Specializations</h4>
-              <div className="flex flex-wrap gap-1">
-                {staffMember.specializations.map((spec, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {spec}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-violet-600" />
+          <h2 className="text-3xl font-bold mb-2 text-gray-900 flex items-center gap-2">
+            <Sparkles className="h-7 w-7 text-[#00bc7d]" />
             Staff Management
           </h2>
           <p className="text-muted-foreground">Manage gym staff and roles</p>
@@ -283,8 +212,7 @@ const StaffManagement: React.FC = () => {
         <div className="flex gap-3">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
-              variant="brand"
-              className="rounded-full h-11 px-6 shadow-lg"
+              className="rounded-xl h-11 px-6 shadow-lg shadow-[#00bc7d]/20 bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white"
               onClick={() => navigate('/staff/new')}
             >
               <UserPlus className="h-4 w-4 mr-2" />
@@ -297,10 +225,10 @@ const StaffManagement: React.FC = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Staff', value: staff.length, icon: Users, gradient: 'from-violet-500 to-blue-500', delay: 0.1 },
-          { label: 'Trainers', value: staff.filter(s => s.role === UserRole.TRAINER).length, icon: UserPlus, gradient: 'from-blue-500 to-cyan-500', delay: 0.2 },
-          { label: 'Support Staff', value: staff.filter(s => s.role === UserRole.STAFF).length, icon: Award, gradient: 'from-indigo-500 to-blue-500', delay: 0.3 },
-          { label: 'Avg. Salary', value: `$${Math.round(staff.reduce((sum, s) => sum + s.salary, 0) / staff.length).toLocaleString()}`, icon: DollarSign, gradient: 'from-cyan-500 to-blue-500', delay: 0.4 },
+          { label: 'Total Staff', value: staff.length, icon: Users, color: 'text-[#00bc7d]', bg: 'bg-[#00bc7d]/10', border: 'border-[#00bc7d]/20', delay: 0.1 },
+          { label: 'Trainers', value: staff.filter(s => s.role === UserRole.TRAINER).length, icon: UserPlus, color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-200', delay: 0.2 },
+          { label: 'Support Staff', value: staff.filter(s => s.role === UserRole.STAFF).length, icon: Award, color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-200', delay: 0.3 },
+          { label: 'Avg. Salary', value: `$${Math.round(staff.reduce((sum, s) => sum + s.salary, 0) / (staff.length || 1)).toLocaleString()}`, icon: DollarSign, color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-200', delay: 0.4 },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -308,17 +236,16 @@ const StaffManagement: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: stat.delay }}
             whileHover={{ scale: 1.02, y: -4 }}
-            className="group relative overflow-hidden rounded-2xl bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 p-6 transition-all duration-300"
+            className="group relative overflow-hidden rounded-3xl bg-white shadow-xl shadow-gray-100/50 border border-gray-100 p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-[#00bc7d]/5"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
             <div className="relative">
               <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
-                  <stat.icon className="h-5 w-5 text-white" />
+                <div className={`p-3 rounded-2xl ${stat.bg} ${stat.border} border`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">{stat.label}</h3>
-              <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              <h3 className="text-sm font-medium text-gray-500 mb-1">{stat.label}</h3>
+              <p className="text-3xl font-bold text-gray-900">
                 {stat.value}
               </p>
             </div>
@@ -327,26 +254,35 @@ const StaffManagement: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Staff Directory</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex space-x-4 mb-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search staff..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-3xl bg-white shadow-2xl shadow-gray-100/50 border border-gray-100 overflow-hidden"
+      >
+        <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-white to-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#00bc7d]/10 rounded-xl border border-[#00bc7d]/10">
+              <Users className="h-6 w-6 text-[#00bc7d]" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Staff Directory</h3>
+              <p className="text-sm text-gray-500">Manage your team members</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-[#00bc7d] transition-colors" />
+              <Input
+                placeholder="Search staff..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] transition-all shadow-sm w-64"
+              />
             </div>
             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
+              <SelectTrigger className="w-48 rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] shadow-sm">
+                <SelectValue placeholder="Filter by Department" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
@@ -356,95 +292,142 @@ const StaffManagement: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+        </div>
 
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Staff Member</TableHead>
-                <TableHead>Position</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Salary</TableHead>
-                <TableHead>Actions</TableHead>
+            <TableHeader className="bg-gray-50/80 backdrop-blur-sm">
+              <TableRow className="border-gray-100 hover:bg-transparent">
+                <TableHead className="w-[300px] font-semibold text-gray-500 py-5 pl-8 text-xs uppercase tracking-wider">Staff Member</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Role & Department</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Join Date</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Status</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-right pr-8 text-xs uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStaff.map((staffMember) => (
-                <TableRow key={staffMember.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        <AvatarImage src={staffMember.avatar} />
-                        <AvatarFallback>{staffMember.firstName[0]}{staffMember.lastName[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{staffMember.firstName} {staffMember.lastName}</div>
-                        <div className="text-sm text-muted-foreground">{staffMember.email}</div>
+              {filteredStaff.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-16 text-gray-500">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
+                        <Users className="h-8 w-8 text-gray-400" />
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{staffMember.position}</TableCell>
-                  <TableCell>
-                    <Badge className={`${getDepartmentColor(staffMember.department)} border rounded-full px-3 py-1`}>
-                      {staffMember.department}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`${getRoleColor(staffMember.role)} border rounded-full px-3 py-1`}>
-                      {staffMember.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>${staffMember.salary.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedStaff(staffMember);
-                          setIsViewDialogOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {hasRole(UserRole.MANAGER) && (
-                        <>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => navigate(`/staff/${staffMember.id}/edit`)}
-                            className="rounded-full"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteStaff(staffMember.id)}
-                            
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
+                      <p className="text-lg font-medium text-gray-900">No staff members found</p>
+                      <p className="text-sm text-gray-500">Try adjusting your search or filters.</p>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredStaff.map((staffMember, index) => (
+                  <motion.tr
+                    key={staffMember.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="border-gray-50 hover:bg-[#00bc7d]/[0.02] transition-colors group"
+                  >
+                    <TableCell className="py-5 pl-8">
+                      <div className="flex items-center space-x-4">
+                        <div className="relative">
+                          <Avatar className="h-12 w-12 ring-2 ring-white shadow-md group-hover:ring-[#00bc7d]/20 transition-all">
+                            <AvatarImage src={staffMember.avatar} />
+                            <AvatarFallback className="bg-gradient-to-br from-[#00bc7d] to-[#009664] text-white font-bold text-lg">
+                              {staffMember.firstName[0]}{staffMember.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-[#00bc7d]"></span>
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 text-base group-hover:text-[#00bc7d] transition-colors">
+                            {staffMember.firstName} {staffMember.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {staffMember.email}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <div className="flex flex-col gap-1.5">
+                        <Badge variant="outline" className={`${getRoleColor(staffMember.role)} border-0 font-medium w-fit px-2.5 py-0.5 rounded-lg shadow-sm`}>
+                          {staffMember.role}
+                        </Badge>
+                        <span className="text-xs text-gray-500 font-medium ml-1">
+                          {staffMember.department}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <div className="flex flex-col gap-0.5">
+                        <div className="text-gray-900 font-medium flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                          {staffMember.hireDate.toLocaleDateString()}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {calculateTenure(staffMember.hireDate)} years tenure
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#00bc7d] animate-pulse"></span>
+                        Active
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5 text-right pr-8">
+                      <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/staff/${staffMember.id}`)}
+                          className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] hover:scale-105 transition-all"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {hasRole(UserRole.MANAGER) && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigate(`/staff/${staffMember.id}/edit`)}
+                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] hover:scale-105 transition-all"
+                              title="Edit Staff"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteStaff(staffMember.id)}
+                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-600 hover:scale-105 transition-all"
+                              title="Delete Staff"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </motion.tr>
+                ))
+              )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
 
       {/* Staff Details Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+      {/* <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-3xl rounded-2xl border-0 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl">Staff Details</DialogTitle>
           </DialogHeader>
-          {selectedStaff && <StaffDetailsDialog staff={selectedStaff} />}
+          {selectedStaff && <StaffDetailsDailog staff={selectedStaff} />}
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
 
     </div>
   );

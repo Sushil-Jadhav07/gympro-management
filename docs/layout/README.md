@@ -1,6 +1,6 @@
 # Layout Components Documentation
 
-Layout components provide the structural foundation of the GymPro dashboard.
+Layout components provide the structural foundation of the GAMA (Gym Admin Management By Asynk) dashboard.
 
 ## Components
 
@@ -118,4 +118,3 @@ import Topbar from '@/components/layout/Topbar';
 - **Sidebar:** Fixed left position, 256px width, glassmorphism effect
 - **Topbar:** Sticky top position, full width, backdrop blur
 - **Colors:** Blue/violet gradient theme, no orange/green/red
-

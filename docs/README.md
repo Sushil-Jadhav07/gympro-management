@@ -1,6 +1,6 @@
-# GymPro Dashboard Documentation
+# GAMA Dashboard Documentation
 
-This documentation provides a comprehensive overview of all components, their connections, and functionality in the GymPro Management System.
+This documentation provides a comprehensive overview of all components, their connections, and functionality in the GAMA (Gym Admin Management By Asynk) system.
 
 ## Documentation Structure
 
@@ -65,4 +65,3 @@ This documentation provides a comprehensive overview of all components, their co
 - **Blue Color Theme** - Unified blue color palette throughout
 
 See [Changelog](./CHANGELOG.md) for complete details.
-

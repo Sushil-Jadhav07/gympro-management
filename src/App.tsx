@@ -4,16 +4,23 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useAuth } from '@/hooks/useAuth';
+import PageLoader from '@/components/ui/PageLoader';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
+import UserCreate from './pages/UserCreate';
+import UserEdit from './pages/UserEdit';
+import UserView from './pages/UserView';
 import MemberCreate from './pages/MemberCreate';
+import MemberView from './pages/MemberView';
 import MemberEdit from './pages/MemberEdit';
 import ClassCreate from './pages/ClassCreate';
 import StaffCreate from './pages/StaffCreate';
 import StaffEdit from './pages/StaffEdit';
 import PaymentCreate from './pages/PaymentCreate';
+import PromoCodeCreate from './pages/PromoCodeCreate';
+import StaffView from './pages/StaffView';
 
 const queryClient = new QueryClient();
 
@@ -21,7 +28,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
@@ -36,21 +43,14 @@ const AppRoutes = () => {
 
   // Show loading while checking authentication
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
       />
       <Route
         path="/dashboard"
@@ -77,10 +77,42 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/users/new"
+        element={
+          <ProtectedRoute>
+            <UserCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users/:id"
+        element={
+          <ProtectedRoute>
+            <UserView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users/:id/edit"
+        element={
+          <ProtectedRoute>
+            <UserEdit />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/members/new"
         element={
           <ProtectedRoute>
             <MemberCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/:id"
+        element={
+          <ProtectedRoute>
+            <MemberView />
           </ProtectedRoute>
         }
       />
@@ -109,6 +141,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/staff/:id"
+        element={
+          <ProtectedRoute>
+            <StaffView />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/staff/:id/edit"
         element={
           <ProtectedRoute>
@@ -121,6 +161,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <PaymentCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/promocodes/new"
+        element={
+          <ProtectedRoute>
+            <PromoCodeCreate />
           </ProtectedRoute>
         }
       />

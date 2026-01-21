@@ -10,10 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Clock, 
-  Users, 
-  MapPin, 
+import {
+  Clock,
+  Users,
+  MapPin,
   Plus,
   Search,
   User,
@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import PageLoader from '../ui/PageLoader';
 
 const ClassBooking: React.FC = () => {
   const navigate = useNavigate();
@@ -42,29 +43,37 @@ const ClassBooking: React.FC = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
-        // 1. Fetch Classes with Instructor details
-        // We'll fetch classes first
+
+        // 1. Fetch Classes
         const { data: classesData, error: classesError } = await supabase
           .from('classes')
           .select('*');
-          
+
         if (classesError) throw classesError;
-        
-        // For instructors, we need to fetch them from users/staff table
-        // We'll collect all instructor IDs
-        const instructorIds = [...new Set(classesData.map((c: any) => c.instructor_id))];
-        
-        const { data: instructorsData, error: instructorsError } = await supabase
-          .from('staff') // Assuming instructors are in staff table
-          .select('*')
-          .in('id', instructorIds);
-          
-        if (instructorsError) {
-           console.warn('Could not fetch instructors', instructorsError);
+
+        if (!classesData || classesData.length === 0) {
+          setClasses([]);
+          setClassSchedules([]);
+          setIsLoading(false);
+          return;
         }
-        
-        const instructorsMap = new Map(instructorsData?.map((i: any) => [i.id, i]) || []);
+
+        // 2. Fetch Instructors
+        const instructorIds = [...new Set(classesData.map((c: any) => c.instructor_id))].filter(Boolean);
+        let instructorsMap = new Map();
+
+        if (instructorIds.length > 0) {
+          const { data: instructorsData, error: instructorsError } = await supabase
+            .from('staff')
+            .select('*')
+            .in('id', instructorIds);
+
+          if (instructorsError) {
+            console.warn('Could not fetch instructors', instructorsError);
+          } else if (instructorsData) {
+            instructorsMap = new Map(instructorsData.map((i: any) => [i.id, i]));
+          }
+        }
 
         const mappedClasses: Class[] = classesData.map((c: any) => {
           const instructor = instructorsMap.get(c.instructor_id);
@@ -89,7 +98,22 @@ const ClassBooking: React.FC = () => {
               specializations: instructor.specializations || [],
               createdAt: new Date(instructor.created_at),
               updatedAt: new Date(instructor.updated_at)
-            } : undefined,
+            } : {
+              // Fallback instructor if missing
+              id: 'unknown',
+              email: '',
+              firstName: 'Unknown',
+              lastName: 'Instructor',
+              role: UserRole.TRAINER,
+              employeeId: '',
+              position: '',
+              department: '',
+              hireDate: new Date(),
+              salary: 0,
+              schedule: [],
+              createdAt: new Date(),
+              updatedAt: new Date()
+            },
             capacity: c.capacity,
             duration: c.duration,
             price: c.price,
@@ -99,47 +123,43 @@ const ClassBooking: React.FC = () => {
             isActive: c.is_active
           };
         });
-        
+
         setClasses(mappedClasses);
 
-        // 2. Fetch Rooms (Skipped as table 'rooms' does not exist yet)
-        // We will use the fallback mock data logic below
-        const roomsData: any[] = [];
+        // 3. Fetch Rooms (mock)
         const roomsMap = new Map();
 
-        /* 
-        const { data: roomsData, error: roomsError } = await supabase
-          .from('rooms')
-          .select('*');
-          
-        const roomsMap = new Map(roomsData?.map((r: any) => [r.id, r]) || []);
-        */
-
-        // 3. Fetch Class Schedules
+        // 4. Fetch Class Schedules
         const { data: schedulesData, error: schedulesError } = await supabase
           .from('class_schedules')
           .select('*')
-          .gte('date', new Date().toISOString().split('T')[0]); // Only future/today schedules
+          .order('date', { ascending: true });
 
         if (schedulesError) throw schedulesError;
+
+        if (!schedulesData || schedulesData.length === 0) {
+          setClassSchedules([]);
+          setIsLoading(false);
+          return;
+        }
 
         const mappedSchedules: ClassSchedule[] = schedulesData.map((s: any) => {
           const relatedClass = mappedClasses.find(c => c.id === s.class_id);
           const relatedRoom = roomsMap.get(s.room_id);
-          
+
           // Fallback mock room if not found
           const room = relatedRoom ? {
-             id: relatedRoom.id,
-             name: relatedRoom.name,
-             capacity: relatedRoom.capacity,
-             equipment: relatedRoom.equipment || [],
-             amenities: relatedRoom.amenities || [],
-             isActive: relatedRoom.is_active
+            id: relatedRoom.id,
+            name: relatedRoom.name,
+            capacity: relatedRoom.capacity,
+            equipment: relatedRoom.equipment || [],
+            amenities: relatedRoom.amenities || [],
+            isActive: relatedRoom.is_active
           } : {
-             id: '0',
-             name: 'Main Studio',
-             capacity: 20,
-             isActive: true
+            id: '0',
+            name: 'Main Studio',
+            capacity: 20,
+            isActive: true
           };
 
           if (!relatedClass) return null;
@@ -172,9 +192,13 @@ const ClassBooking: React.FC = () => {
     fetchData();
   }, []);
 
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
   const handleBookClass = async (schedule: ClassSchedule) => {
     if (!user) return;
-    
+
     try {
       // Create booking in Supabase
       const { error } = await supabase
@@ -189,12 +213,12 @@ const ClassBooking: React.FC = () => {
       if (error) throw error;
 
       // Update local state
-      setClassSchedules(prev => prev.map(s => 
-        s.id === schedule.id 
+      setClassSchedules(prev => prev.map(s =>
+        s.id === schedule.id
           ? { ...s, bookedCount: s.bookedCount + 1 }
           : s
       ));
-      
+
       toast.success('Class booked successfully!');
       setIsBookingDialogOpen(false);
     } catch (error: any) {
@@ -206,25 +230,45 @@ const ClassBooking: React.FC = () => {
   const filteredSchedules = classSchedules.filter(schedule => {
     const matchesCategory = filterCategory === 'all' || schedule.class.category === filterCategory;
     const matchesSearch = schedule.class.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         schedule.class.instructor.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         schedule.class.instructor.lastName.toLowerCase().includes(searchTerm.toLowerCase());
+      schedule.class.instructor.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.class.instructor.lastName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty.toLowerCase()) {
+      case 'beginner':
+        return 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20';
+      case 'intermediate':
+        return 'bg-[#00bc7d]/20 text-[#00bc7d] border-[#00bc7d]/30';
+      case 'advanced':
+        return 'bg-[#00bc7d]/30 text-[#00bc7d] border-[#00bc7d]/40';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getAvailabilityColor = (schedule: ClassSchedule) => {
+    const availableSpots = schedule.class.capacity - schedule.bookedCount;
+    if (availableSpots === 0) return 'bg-red-50 text-red-600 border-red-100';
+    if (availableSpots < 5) return 'bg-orange-50 text-orange-600 border-orange-100';
+    return 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20';
+  };
 
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent flex items-center gap-2">
-            <Sparkles className="h-7 w-7 text-violet-600" />
+          <h2 className="text-3xl font-bold mb-2 text-gray-900 flex items-center gap-2">
+            <Sparkles className="h-7 w-7 text-[#00bc7d]" />
             Class Booking
           </h2>
           <p className="text-muted-foreground">Book fitness classes and manage your schedule</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button 
+          <Button
             onClick={() => navigate('/classes/new')}
-            className="rounded-full h-11 px-6 shadow-lg"
+            className="rounded-xl h-11 px-6 shadow-lg shadow-[#00bc7d]/20 bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white"
             variant="default"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -237,30 +281,31 @@ const ClassBooking: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl bg-white/60 backdrop-blur-xl border border-white/20 shadow-lg shadow-black/5 overflow-hidden"
+        className="rounded-3xl bg-white shadow-2xl shadow-gray-100/50 border border-gray-100 overflow-hidden"
       >
-        <CardHeader className="bg-gradient-to-r from-white/80 to-white/40 border-b border-border/40">
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-violet-600" />
-            Available Classes
-          </CardTitle>
-          <CardDescription>Browse and book fitness classes</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search classes or instructors..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 rounded-full border-2 h-11 bg-white/50"
-                />
-              </div>
+        <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-white to-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#00bc7d]/10 rounded-xl border border-[#00bc7d]/10">
+              <CalendarIcon className="h-6 w-6 text-[#00bc7d]" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Available Classes</h3>
+              <p className="text-sm text-gray-500">Browse and book fitness classes</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-[#00bc7d] transition-colors" />
+              <Input
+                placeholder="Search classes or instructors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] transition-all shadow-sm w-64"
+              />
             </div>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-48 rounded-full border-2 h-11 bg-white/50">
+              <SelectTrigger className="w-48 rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] shadow-sm">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
@@ -273,94 +318,109 @@ const ClassBooking: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+        </div>
 
-          {/* Classes Table */}
-          <div className="rounded-xl border border-border/40 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-gradient-to-r from-gray-50/50 to-white/50">
-                <TableRow className="border-border/40">
-                  <TableHead className="font-semibold">Class</TableHead>
-                  <TableHead className="font-semibold">Instructor</TableHead>
-                  <TableHead className="font-semibold">Schedule</TableHead>
-                  <TableHead className="font-semibold">Location</TableHead>
-                  <TableHead className="font-semibold">Difficulty</TableHead>
-                  <TableHead className="font-semibold">Availability</TableHead>
-                  <TableHead className="font-semibold">Price</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
+        {/* Classes Table */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-gray-50/80 backdrop-blur-sm">
+              <TableRow className="border-gray-100 hover:bg-transparent">
+                <TableHead className="font-semibold text-gray-500 py-5 pl-8 text-xs uppercase tracking-wider">Class</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Instructor</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Schedule</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Location</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Difficulty</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Availability</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Price</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-right pr-8 text-xs uppercase tracking-wider">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-16">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#00bc7d]"></div>
+                      <span className="mt-4 text-gray-500 font-medium">Loading classes...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSchedules.map((schedule, index) => {
+              ) : filteredSchedules.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-16 text-gray-500">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
+                        <CalendarIcon className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <p className="text-lg font-medium text-gray-900">No classes found</p>
+                      <p className="text-sm text-gray-500">Try adjusting your search or filters to find what you're looking for.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredSchedules.map((schedule, index) => {
                   const availableSpots = schedule.class.capacity - schedule.bookedCount;
                   const isFullyBooked = availableSpots === 0;
 
                   return (
                     <motion.tr
                       key={schedule.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="border-border/40 hover:bg-gradient-to-r hover:from-violet-50/50 hover:to-blue-50/50 transition-colors"
+                      className="border-gray-50 hover:bg-[#00bc7d]/[0.02] transition-colors group"
                     >
-                      <TableCell>
+                      <TableCell className="py-5 pl-8">
                         <div>
-                          <div className="font-medium">{schedule.class.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {schedule.class.description}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="font-bold text-gray-900 text-base group-hover:text-[#00bc7d] transition-colors">{schedule.class.name}</div>
+                          <div className="text-sm text-gray-500">
                             {schedule.class.duration} minutes
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span>
+                          <div className="p-2 bg-gray-100 rounded-full">
+                            <User className="h-4 w-4 text-gray-500" />
+                          </div>
+                          <span className="font-medium text-gray-700">
                             {schedule.class.instructor.firstName} {schedule.class.instructor.lastName}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="text-sm">
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-3 w-3 text-muted-foreground" />
+                          <div className="flex items-center space-x-1 font-medium text-gray-900">
+                            <Clock className="h-3.5 w-3.5 text-[#00bc7d]" />
                             <span>{schedule.startTime} - {schedule.endTime}</span>
                           </div>
-                          <div className="text-muted-foreground">
+                          <div className="text-gray-500 pl-4.5">
                             {schedule.date.toLocaleDateString()}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="flex items-center space-x-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">{schedule.room.name}</span>
+                          <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="text-sm text-gray-600">{schedule.room.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge className={`${getDifficultyColor(schedule.class.difficulty)} border rounded-full px-3 py-1`}>
+                      <TableCell className="py-5">
+                        <Badge className={`${getDifficultyColor(schedule.class.difficulty)} border-0 px-3 py-1`}>
                           {schedule.class.difficulty}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5">
                         <div className="space-y-1">
-                          <Badge className={`${getAvailabilityColor(schedule)} border rounded-full px-3 py-1`}>
+                          <Badge variant="outline" className={`${getAvailabilityColor(schedule)} border rounded-full px-3 py-1`}>
                             {availableSpots} spots left
                           </Badge>
-                          <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                            <Users className="h-3 w-3" />
-                            <span>{schedule.bookedCount}/{schedule.class.capacity}</span>
-                            {schedule.waitlistCount > 0 && (
-                              <span>(+{schedule.waitlistCount} waitlist)</span>
-                            )}
-                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="font-medium">${schedule.class.price}</div>
+                      <TableCell className="py-5">
+                        <div className="font-bold text-gray-900">${schedule.class.price}</div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-5 text-right pr-8">
                         <Button
                           size="sm"
                           onClick={() => {
@@ -368,18 +428,21 @@ const ClassBooking: React.FC = () => {
                             setIsBookingDialogOpen(true);
                           }}
                           disabled={isFullyBooked && !hasRole(UserRole.STAFF)}
-                          className="rounded-full bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 disabled:opacity-50"
+                          className={`rounded-xl shadow-md transition-all ${isFullyBooked
+                            ? 'bg-orange-100 text-orange-600 hover:bg-orange-200'
+                            : 'bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-[#00bc7d]/20'
+                            }`}
                         >
                           {isFullyBooked ? 'Join Waitlist' : 'Book Now'}
                         </Button>
                       </TableCell>
                     </motion.tr>
                   );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </motion.div>
 
       {/* Booking Dialog */}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Member, Payment, PaymentStatus as PaymentStatusType } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,17 +8,19 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Search, 
-  DollarSign, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  Search,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
   XCircle,
   CreditCard,
   Calendar,
   Users,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  Filter
 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
@@ -44,7 +47,7 @@ const PaymentStatus: React.FC = () => {
 
         if (paymentsError) throw paymentsError;
 
-        const mappedPayments: Payment[] = paymentsData.map((p: any) => ({
+        const mappedPayments: Payment[] = (paymentsData || []).map((p: any) => ({
           id: p.id,
           memberId: p.member_id,
           amount: parseFloat(p.amount),
@@ -66,7 +69,7 @@ const PaymentStatus: React.FC = () => {
 
         if (membersError) throw membersError;
 
-        const mappedMembers: Member[] = membersData.map((m: any) => ({
+        const mappedMembers: Member[] = (membersData || []).map((m: any) => ({
           id: m.id,
           firstName: m.first_name,
           lastName: m.last_name,
@@ -91,15 +94,15 @@ const PaymentStatus: React.FC = () => {
   const getStatusColor = (status: PaymentStatusType) => {
     switch (status) {
       case PaymentStatusType.COMPLETED:
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20';
       case PaymentStatusType.PENDING:
-        return 'bg-indigo-100 text-indigo-800';
+        return 'bg-amber-100 text-amber-800 border-amber-200';
       case PaymentStatusType.OVERDUE:
-        return 'bg-violet-100 text-violet-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       case PaymentStatusType.FAILED:
-        return 'bg-blue-300 text-blue-700';
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -131,14 +134,14 @@ const PaymentStatus: React.FC = () => {
   const filteredPayments = payments.filter(payment => {
     const memberName = getMemberName(payment.memberId).toLowerCase();
     const memberEmail = getMemberEmail(payment.memberId).toLowerCase();
-    
-    const matchesSearch = 
+
+    const matchesSearch =
       memberName.includes(searchTerm.toLowerCase()) ||
       memberEmail.includes(searchTerm.toLowerCase()) ||
       payment.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -153,99 +156,91 @@ const PaymentStatus: React.FC = () => {
   };
 
   const processPayment = (paymentId: string) => {
-    setPayments(prev => prev.map(payment => 
-      payment.id === paymentId 
-        ? { 
-            ...payment, 
-            status: PaymentStatusType.COMPLETED, 
-            paymentDate: new Date(),
-            updatedAt: new Date()
-          }
+    setPayments(prev => prev.map(payment =>
+      payment.id === paymentId
+        ? {
+          ...payment,
+          status: PaymentStatusType.COMPLETED,
+          paymentDate: new Date(),
+          updatedAt: new Date()
+        }
         : payment
     ));
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Payment Status Dashboard</h2>
+          <h2 className="text-3xl font-bold mb-2 text-gray-900 flex items-center gap-2">
+            <Sparkles className="h-7 w-7 text-[#00bc7d]" />
+            Payment Status Dashboard
+          </h2>
           <p className="text-muted-foreground">Monitor all member payment statuses and transactions</p>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPayments}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.completedPayments}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{stats.pendingPayments}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-violet-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-violet-600">{stats.overduePayments}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">${stats.totalRevenue.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Total Payments', value: stats.totalPayments, icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-200', delay: 0.1 },
+          { label: 'Completed', value: stats.completedPayments, icon: CheckCircle, color: 'text-[#00bc7d]', bg: 'bg-[#00bc7d]/10', border: 'border-[#00bc7d]/20', delay: 0.2 },
+          { label: 'Pending', value: stats.pendingPayments, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-200', delay: 0.3 },
+          { label: 'Overdue', value: stats.overduePayments, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-200', delay: 0.4 },
+          { label: 'Revenue', value: `$${stats.totalRevenue.toFixed(2)}`, icon: TrendingUp, color: 'text-[#00bc7d]', bg: 'bg-[#00bc7d]/10', border: 'border-[#00bc7d]/20', delay: 0.5 },
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: stat.delay }}
+            whileHover={{ scale: 1.02, y: -4 }}
+            className="group relative overflow-hidden rounded-3xl bg-white shadow-xl shadow-gray-100/50 border border-gray-100 p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-[#00bc7d]/5"
+          >
+            <div className="relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 rounded-2xl ${stat.bg} ${stat.border} border`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </div>
+              </div>
+              <h3 className="text-sm font-medium text-gray-500 mb-1">{stat.label}</h3>
+              <p className="text-3xl font-bold text-gray-900">
+                {stat.value}
+              </p>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
-      {/* Payments Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Status Overview</CardTitle>
-          <CardDescription>
-            Track and manage all member payment statuses
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex space-x-4 mb-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search payments..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+      {/* Payments List */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-3xl bg-white shadow-2xl shadow-gray-100/50 border border-gray-100 overflow-hidden"
+      >
+        <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-white to-gray-50/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#00bc7d]/10 rounded-xl border border-[#00bc7d]/10">
+              <CreditCard className="h-6 w-6 text-[#00bc7d]" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Payment Overview</h3>
+              <p className="text-sm text-gray-500">Track and manage payments</p>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 group-focus-within:text-[#00bc7d] transition-colors" />
+              <Input
+                placeholder="Search payments..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] transition-all shadow-sm w-64"
+              />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-48 rounded-xl border-gray-200 h-11 bg-white focus:ring-2 focus:ring-[#00bc7d]/20 focus:border-[#00bc7d] shadow-sm">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -257,91 +252,112 @@ const PaymentStatus: React.FC = () => {
               </SelectContent>
             </Select>
           </div>
+        </div>
 
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Member</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment Date</TableHead>
-                <TableHead>Actions</TableHead>
+            <TableHeader className="bg-gray-50/80 backdrop-blur-sm">
+              <TableRow className="border-gray-100 hover:bg-transparent">
+                <TableHead className="w-[250px] font-semibold text-gray-500 py-5 pl-8 text-xs uppercase tracking-wider">Member</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Description</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Amount</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Due Date</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Status</TableHead>
+                <TableHead className="font-semibold text-gray-500 py-5 text-right pr-8 text-xs uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.map((payment) => (
-                <TableRow key={payment.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        <AvatarFallback>
-                          {getMemberName(payment.memberId).split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{getMemberName(payment.memberId)}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {getMemberEmail(payment.memberId)}
-                        </div>
+              {filteredPayments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-16 text-gray-500">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
+                        <DollarSign className="h-8 w-8 text-gray-400" />
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{payment.description}</div>
-                      <div className="text-sm text-muted-foreground">{payment.method}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">${payment.amount.toFixed(2)}</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {payment.dueDate.toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(payment.status)}>
-                      <div className="flex items-center space-x-1">
-                        {getStatusIcon(payment.status)}
-                        <span>{payment.status}</span>
-                      </div>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {payment.paymentDate ? payment.paymentDate.toLocaleDateString() : '-'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      {payment.status === PaymentStatusType.PENDING && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => processPayment(payment.id)}
-                        >
-                          Process Payment
-                        </Button>
-                      )}
-                      {payment.status === PaymentStatusType.OVERDUE && (
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          onClick={() => processPayment(payment.id)}
-                        >
-                          Mark as Paid
-                        </Button>
-                      )}
+                      <p className="text-lg font-medium text-gray-900">No payments found</p>
+                      <p className="text-sm text-gray-500">Try adjusting your search or filters.</p>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredPayments.map((payment, index) => (
+                  <motion.tr
+                    key={payment.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="border-gray-50 hover:bg-[#00bc7d]/[0.02] transition-colors group"
+                  >
+                    <TableCell className="py-5 pl-8">
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="h-10 w-10 ring-2 ring-white shadow-md group-hover:ring-[#00bc7d]/20 transition-all">
+                          <AvatarFallback className="bg-gradient-to-br from-[#00bc7d] to-[#009664] text-white font-bold">
+                            {getMemberName(payment.memberId).split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-bold text-gray-900 group-hover:text-[#00bc7d] transition-colors">
+                            {getMemberName(payment.memberId)}
+                          </div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
+                            {getMemberEmail(payment.memberId)}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-gray-900">{payment.description}</span>
+                        <span className="text-xs text-gray-500 capitalize">{payment.method.toLowerCase().replace('_', ' ')}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <span className="font-bold text-gray-900 text-base">
+                        ${payment.amount.toFixed(2)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                        <Calendar className="h-4 w-4" />
+                        {payment.dueDate.toLocaleDateString()}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5">
+                      <Badge className={`${getStatusColor(payment.status)} border-0 font-medium px-2.5 py-1 rounded-lg shadow-sm flex w-fit items-center gap-1.5`}>
+                        {getStatusIcon(payment.status)}
+                        {payment.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-5 text-right pr-8">
+                      <div className="flex justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
+                        {payment.status === PaymentStatusType.PENDING && (
+                          <Button
+                            size="sm"
+                            onClick={() => processPayment(payment.id)}
+                            className="bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-md shadow-[#00bc7d]/20 rounded-xl h-9"
+                          >
+                            Process
+                          </Button>
+                        )}
+                        {payment.status === PaymentStatusType.OVERDUE && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => processPayment(payment.id)}
+                            className="shadow-md shadow-red-500/20 rounded-xl h-9"
+                          >
+                            Mark Paid
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </motion.tr>
+                ))
+              )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
     </div>
   );
 };

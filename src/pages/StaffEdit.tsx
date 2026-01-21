@@ -12,6 +12,17 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
+import {
+  ArrowLeft,
+  UserCheck,
+  Briefcase,
+  DollarSign,
+  Phone,
+  Mail,
+  CheckCircle2,
+  ShieldCheck,
+  Building2
+} from 'lucide-react';
 
 type DbStaff = {
   id: string;
@@ -109,6 +120,21 @@ const StaffEdit: React.FC = () => {
     }
   }, [staff]);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -140,7 +166,7 @@ const StaffEdit: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -152,135 +178,270 @@ const StaffEdit: React.FC = () => {
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className="transition-all duration-300"
       >
-        <Topbar />
+        <Topbar
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
         <main className="p-8">
-          <div className="max-w-4xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl">Edit Staff Member</CardTitle>
-                <CardDescription>Update staff member information</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!allowed ? (
-                  <div className="p-6 text-center text-muted-foreground">Access denied</div>
-                ) : isLoading ? (
-                  <div className="p-6 text-center">Loading...</div>
-                ) : !staff ? (
-                  <div className="p-6 text-center">Staff member not found</div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="firstName">First Name</Label>
-                          <Input
-                            id="firstName"
-                            value={formData.firstName}
-                            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                            required
-                          />
+          <div className="max-w-7xl mx-auto space-y-8">
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <motion.h1
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="text-3xl font-bold mb-2 text-gray-900 flex items-center gap-3"
+                >
+                  <div className="p-3 bg-[#00bc7d] rounded-xl shadow-lg shadow-[#00bc7d]/20">
+                    <UserCheck className="h-6 w-6 text-white" />
+                  </div>
+                  Edit Staff Member
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-muted-foreground ml-16"
+                >
+                  Update information for {staff ? `${staff.firstName} ${staff.lastName}` : 'staff member'}.
+                </motion.p>
+              </div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/dashboard?tab=staff')}
+                  className="group hover:border-[#00bc7d] hover:text-[#00bc7d] hover:bg-[#00bc7d]/5 rounded-xl border-gray-200"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                  Back to Staff
+                </Button>
+              </motion.div>
+            </div>
+
+            {!allowed ? (
+              <div className="p-6 text-center text-muted-foreground">Access denied</div>
+            ) : isLoading ? (
+              <div className="p-6 text-center">Loading...</div>
+            ) : !staff ? (
+              <div className="p-6 text-center">Staff member not found</div>
+            ) : (
+              <motion.form
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                onSubmit={handleSubmit}
+                className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+              >
+                {/* Left Column - Main Info */}
+                <div className="lg:col-span-2 space-y-8">
+
+                  {/* Personal Information */}
+                  <motion.div variants={itemVariants}>
+                    <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 pb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-[#00bc7d]/10 rounded-lg">
+                            <ShieldCheck className="h-5 w-5 text-[#00bc7d]" />
+                          </div>
+                          <CardTitle className="text-lg font-semibold text-gray-900">Personal Information</CardTitle>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="lastName">Last Name</Label>
-                          <Input
-                            id="lastName"
-                            value={formData.lastName}
-                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                            required
-                          />
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="firstName">First Name</Label>
+                            <Input
+                              id="firstName"
+                              value={formData.firstName}
+                              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                              className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="lastName">Last Name</Label>
+                            <Input
+                              id="lastName"
+                              value={formData.lastName}
+                              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                              className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="email">Email Address</Label>
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                className="pl-10 h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="phone">Phone Number</Label>
+                            <div className="relative">
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input
+                                id="phone"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                className="pl-10 h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                                required
+                              />
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="position">Position</Label>
-                          <Input
-                            id="position"
-                            value={formData.position}
-                            onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                            required
-                          />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Employment Details */}
+                  <motion.div variants={itemVariants}>
+                    <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 pb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-[#00bc7d]/10 rounded-lg">
+                            <Briefcase className="h-5 w-5 text-[#00bc7d]" />
+                          </div>
+                          <CardTitle className="text-lg font-semibold text-gray-900">Employment Details</CardTitle>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="department">Department</Label>
-                          <Select
-                            value={formData.department}
-                            onValueChange={(value) => setFormData({ ...formData, department: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select department" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Fitness">Fitness</SelectItem>
-                              <SelectItem value="Operations">Operations</SelectItem>
-                              <SelectItem value="Management">Management</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="position">Position Title</Label>
+                            <Input
+                              id="position"
+                              placeholder="e.g. Senior Trainer"
+                              value={formData.position}
+                              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                              className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="department">Department</Label>
+                            <Select
+                              value={formData.department}
+                              onValueChange={(value) => setFormData({ ...formData, department: value })}
+                            >
+                              <SelectTrigger className="h-11 focus:ring-[#00bc7d] rounded-xl border-gray-200">
+                                <SelectValue placeholder="Select Department" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Fitness">Fitness</SelectItem>
+                                <SelectItem value="Operations">Operations</SelectItem>
+                                <SelectItem value="Management">Management</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="role">System Role</Label>
+                            <Select
+                              value={formData.role}
+                              onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
+                            >
+                              <SelectTrigger className="h-11 focus:ring-[#00bc7d] rounded-xl border-gray-200">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={UserRole.TRAINER}>Trainer</SelectItem>
+                                <SelectItem value={UserRole.STAFF}>Staff</SelectItem>
+                                <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="salary">Annual Salary</Label>
-                          <Input
-                            id="salary"
-                            type="number"
-                            value={formData.salary}
-                            onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-                            required
-                          />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </div>
+
+                {/* Right Column - Compensation & Summary */}
+                <div className="space-y-8">
+
+                  {/* Compensation Card */}
+                  <motion.div variants={itemVariants}>
+                    <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl h-full">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 pb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-[#00bc7d]/10 rounded-lg">
+                            <DollarSign className="h-5 w-5 text-[#00bc7d]" />
+                          </div>
+                          <CardTitle className="text-lg text-gray-900">Compensation</CardTitle>
                         </div>
+                        <CardDescription>Set salary and benefits</CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-6">
                         <div className="space-y-2">
-                          <Label htmlFor="role">Role</Label>
-                          <Select
-                            value={formData.role}
-                            onValueChange={(value) => setFormData({ ...formData, role: value as UserRole })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={UserRole.TRAINER}>Trainer</SelectItem>
-                              <SelectItem value={UserRole.STAFF}>Staff</SelectItem>
-                              <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="salary">Annual Salary ($)</Label>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                            <Input
+                              id="salary"
+                              type="number"
+                              value={formData.salary}
+                              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                              className="pl-10 h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200 text-lg font-semibold"
+                              placeholder="0.00"
+                              required
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end space-x-2 pt-4 border-t">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => navigate('/dashboard?tab=staff')}
-                      >
-                        Cancel
-                      </Button>
-                      <Button type="submit" variant="brand">
-                        Update Staff Member
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
+
+                        <div className="bg-[#00bc7d]/5 rounded-xl p-4 border border-[#00bc7d]/10">
+                          <h4 className="font-semibold text-[#00bc7d] mb-2 flex items-center gap-2">
+                            <Building2 className="h-4 w-4" />
+                            Gym Access
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            Staff members receive full gym access and employee benefits automatically.
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Summary / Actions */}
+                  <motion.div variants={itemVariants}>
+                    <Card className="border-0 shadow-xl shadow-[#00bc7d]/5 bg-white overflow-hidden rounded-2xl relative">
+                      <div className="absolute top-0 right-0 p-32 bg-[#00bc7d]/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+                      <CardContent className="p-6 relative">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-sm font-medium text-gray-500">Department</span>
+                          <span className="text-lg font-bold text-gray-900">{formData.department || '-'}</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-6">
+                          <span className="text-sm font-medium text-gray-500">Role</span>
+                          <span className="text-lg font-bold text-gray-900">{formData.role}</span>
+                        </div>
+
+                        <Button
+                          type="submit"
+                          className="w-full h-12 text-lg font-semibold bg-[#00bc7d] hover:bg-[#00bc7d]/90 shadow-lg shadow-[#00bc7d]/20 rounded-xl"
+                        >
+                          Update Staff Member
+                          <CheckCircle2 className="ml-2 h-5 w-5" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </div>
+              </motion.form>
+            )}
           </div>
         </main>
       </motion.div>

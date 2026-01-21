@@ -6,10 +6,10 @@ import { UserRole } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  Calendar, 
-  DollarSign, 
+import {
+  Users,
+  Calendar,
+  DollarSign,
   Activity,
   TrendingUp,
   Clock,
@@ -72,7 +72,7 @@ const StatCard: React.FC<{
   delay?: number;
 }> = ({ title, value, change, icon: Icon, gradient, delay = 0 }) => {
   const isPositive = change >= 0;
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -87,10 +87,10 @@ const StatCard: React.FC<{
           <div className={`p-3 rounded-xl bg-gradient-to-br ${gradient} shadow-lg`}>
             <Icon className="h-5 w-5 text-white" />
           </div>
-          <div className={`flex items-center gap-1 text-xs font-medium ${isPositive ? 'text-blue-600' : 'text-blue-400'}`}>
+          {/* <div className={`flex items-center gap-1 text-xs font-medium ${isPositive ? 'text-blue-600' : 'text-blue-400'}`}>
             {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
             {Math.abs(change)}%
-          </div>
+          </div> */}
         </div>
         <h3 className="text-sm font-medium text-muted-foreground mb-2">{title}</h3>
         <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
@@ -119,7 +119,7 @@ const Dashboard: React.FC = () => {
         value={1234}
         change={12}
         icon={Users}
-        gradient="from-violet-500 to-blue-500"
+        gradient="from-[#00bc7d] to-[#009664]"
         delay={0.1}
       />
       <StatCard
@@ -127,7 +127,7 @@ const Dashboard: React.FC = () => {
         value={48}
         change={8}
         icon={Calendar}
-        gradient="from-blue-500 to-cyan-500"
+        gradient="from-[#00bc7d] to-emerald-500"
         delay={0.2}
       />
       <StatCard
@@ -135,7 +135,7 @@ const Dashboard: React.FC = () => {
         value={45231}
         change={15}
         icon={DollarSign}
-        gradient="from-blue-500 to-indigo-500"
+        gradient="from-emerald-500 to-teal-500"
         delay={0.3}
       />
       <StatCard
@@ -143,73 +143,28 @@ const Dashboard: React.FC = () => {
         value={94}
         change={-2}
         icon={Activity}
-        gradient="from-cyan-500 to-blue-500"
+        gradient="from-teal-500 to-[#00bc7d]"
         delay={0.4}
       />
     </div>
   );
 
-  const RecentActivity = () => {
-    const activities = [
-      { icon: Users, text: 'New member registration', subtext: 'John Doe joined Premium membership', time: '2 min ago', color: 'from-blue-500 to-cyan-500' },
-      { icon: Calendar, text: 'Class booking', subtext: 'Yoga class is now fully booked', time: '5 min ago', color: 'from-violet-500 to-blue-500' },
-      { icon: Activity, text: 'Equipment maintenance', subtext: 'Treadmill #3 scheduled for service', time: '1 hour ago', color: 'from-indigo-500 to-blue-500' },
-    ];
-
-    return (
-      <GlassCard delay={0.3}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-violet-600" />
-            Recent Activity
-          </CardTitle>
-          <CardDescription>Latest updates and notifications</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {activities.map((activity, index) => {
-              const Icon = activity.icon;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors"
-                >
-                  <div className={`p-2.5 rounded-lg bg-gradient-to-br ${activity.color} shadow-md`}>
-                    <Icon className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.text}</p>
-                    <p className="text-xs text-muted-foreground">{activity.subtext}</p>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{activity.time}</div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </GlassCard>
-    );
-  };
-
   const QuickActions = () => {
     const actions = [
-      { icon: Users, label: 'Add Member', color: 'from-violet-500 to-blue-500' },
-      { icon: Calendar, label: 'Schedule Class', color: 'from-blue-500 to-cyan-500' },
-      { icon: CreditCard, label: 'Process Payment', color: 'from-indigo-500 to-blue-500' },
-      { icon: Activity, label: 'View Reports', color: 'from-cyan-500 to-blue-500' },
+      { icon: Users, label: 'Add Member', description: 'Register a new gym member', color: 'bg-[#00bc7d] text-[#fff]' },
+      { icon: Calendar, label: 'Schedule Class', description: 'Create a new class session', color: 'bg-[#00bc7d] text-[#fff]' },
+      { icon: CreditCard, label: 'Process Payment', description: 'Record a transaction', color: 'bg-[#00bc7d] text-[#fff]' },
+      { icon: Activity, label: 'View Reports', description: 'Analyze gym performance', color: 'bg-[#00bc7d] text-[#fff]' },
     ];
 
     return (
-      <GlassCard delay={0.4}>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks and shortcuts</CardDescription>
+      <GlassCard delay={0.4} className="h-full bg-white border-none shadow-xl shadow-black/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl font-bold text-gray-900">Quick Actions</CardTitle>
+          <CardDescription className="text-gray-500">Common tasks and shortcuts</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
+        <CardContent className="mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {actions.map((action, index) => {
               const Icon = action.icon;
               return (
@@ -218,16 +173,16 @@ const Dashboard: React.FC = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.5 + index * 0.1 }}
-                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/20 p-4 hover:shadow-md transition-all duration-300"
+                  className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-gray-50 border border-gray-100 p-6 shadow-sm hover:shadow-lg hover:shadow-[#00bc7d]/10 hover:border-[#00bc7d]/20 hover:bg-white transition-all duration-300 h-auto min-h-[160px] group"
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-10 transition-opacity`} />
-                  <div className="relative flex flex-col items-center gap-2">
-                    <div className={`p-3 rounded-lg bg-gradient-to-br ${action.color} shadow-md`}>
-                      <Icon className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-sm font-medium">{action.label}</span>
+                  <div className={`p-4 rounded-xl ${action.color} shadow-md shadow-[#00bc7d]/20 group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div className="text-center">
+                    <span className="block text-sm font-bold text-gray-900 mb-1 group-hover:text-[#00bc7d] transition-colors">{action.label}</span>
+                    <span className="block text-xs text-gray-500 group-hover:text-gray-600 transition-colors">{action.description}</span>
                   </div>
                 </motion.button>
               );
@@ -238,9 +193,114 @@ const Dashboard: React.FC = () => {
     );
   };
 
+
+  const IntroSection = () => (
+    <div className="relative overflow-hidden rounded-3xl bg-white p-8 shadow-sm border border-gray-100">
+      <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+        <div className="space-y-1">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+            Welcome back, <span className="text-[#00bc7d]">{user.firstName}</span>
+          </h1>
+          <p className="text-base text-gray-500 max-w-xl">
+            Here's what's happening at your gym today.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-end gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00bc7d]/5 border border-[#00bc7d]/10">
+            <div className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00bc7d] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00bc7d]"></span>
+            </div>
+            <span className="text-sm font-medium text-[#00bc7d]">Live</span>
+            <span className="mx-1 text-gray-300">|</span>
+            <span className="text-sm font-medium text-gray-500 flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </span>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="h-10 rounded-xl border-gray-200 hover:border-[#00bc7d] hover:text-[#00bc7d] hover:bg-[#00bc7d]/5 transition-all">
+              <Users className="mr-2 h-4 w-4" />
+              Members
+            </Button>
+            <Button variant="outline" className="h-10 rounded-xl border-gray-200 hover:border-[#00bc7d] hover:text-[#00bc7d] hover:bg-[#00bc7d]/5 transition-all">
+              <Calendar className="mr-2 h-4 w-4" />
+              Schedule
+            </Button>
+            <Button className="h-10 rounded-xl bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-lg shadow-[#00bc7d]/20 transition-all">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Revenue
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const FeatureHighlights = () => {
+    const features = [
+      {
+        icon: TrendingUp,
+        title: 'Growth at a glance',
+        description: 'Track member growth, retention, and revenue trends without leaving the dashboard.',
+        color: 'from-[#00bc7d] to-[#009664]',
+      },
+      {
+        icon: Calendar,
+        title: 'Smart scheduling',
+        description: 'See how classes are filling up so you can adjust capacity in real time.',
+        color: 'from-[#00bc7d] to-emerald-500',
+      },
+      {
+        icon: Activity,
+        title: 'Operations overview',
+        description: 'Monitor equipment status and activity to keep your gym running smoothly.',
+        color: 'from-emerald-500 to-teal-500',
+      },
+    ];
+
+    return (
+      <GlassCard delay={0.2} className="bg-white/80">
+        <CardHeader className="flex flex-col gap-2">
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[#00bc7d]" />
+            Key features
+          </CardTitle>
+          <CardDescription>Everything you need to run your gym, in one view.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + index * 0.1 }}
+                  className="relative overflow-hidden rounded-2xl border border-white/40 bg-white/70 backdrop-blur-xl p-4 shadow-sm shadow-black/5 hover:shadow-lg hover:shadow-[#00bc7d]/10 hover:border-[#00bc7d]/20 transition-all duration-300"
+                >
+                  <div className={`mb-3 inline-flex items-center justify-center rounded-xl bg-gradient-to-br ${feature.color} p-2.5 shadow-md shadow-[#00bc7d]/20`}>
+                    <Icon className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">{feature.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </GlassCard>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      <Sidebar 
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
@@ -251,7 +311,10 @@ const Dashboard: React.FC = () => {
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className="transition-all duration-300"
       >
-        <Topbar />
+        <Topbar
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
         <main className="p-8">
           <AnimatePresence mode="wait">
             {activeTab === 'overview' && (
@@ -263,19 +326,15 @@ const Dashboard: React.FC = () => {
                 transition={{ duration: 0.3 }}
                 className="space-y-8"
               >
-                <div>
-                  <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                    Welcome back, {user.firstName}! 👋
-                  </h1>
-                  <p className="text-muted-foreground">Here's what's happening at your gym today.</p>
-                </div>
+                <IntroSection />
+
+                <FeatureHighlights />
 
                 <QuickStats />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <RecentActivity />
+                {/* <div className="mt-8">
                   <QuickActions />
-                </div>
+                </div> */}
               </motion.div>
             )}
 

@@ -1,4 +1,4 @@
-# Getting Started with GymPro Dashboard
+# Getting Started with GAMA Dashboard
 
 This guide will help you understand the codebase structure and how components are connected.
 
