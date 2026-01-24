@@ -199,7 +199,7 @@ const Dashboard: React.FC = () => {
       <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
         <div className="space-y-1">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
-            Welcome back, <span className="text-[#00bc7d]">{user.firstName}</span>
+            Checking in, <span className="text-[#00bc7d]">{user.firstName}</span>
           </h1>
           <p className="text-base text-gray-500 max-w-xl">
             Here's what's happening at your gym today.
