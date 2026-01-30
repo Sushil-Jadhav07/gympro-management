@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Bell, User, ChevronDown, X, LogOut, Menu, Settings } from 'lucide-react';
+import { Search, Bell, User, ChevronDown, X, LogOut, Menu, Settings, Calendar } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,12 @@ const Topbar: React.FC<TopbarProps> = ({ isSidebarCollapsed, onToggleSidebar }) 
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [notifications] = useState(3);
+  const formattedDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
 
   return (
     <motion.header
@@ -68,6 +74,11 @@ const Topbar: React.FC<TopbarProps> = ({ isSidebarCollapsed, onToggleSidebar }) 
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
+        <div className="hidden lg:flex items-center gap-2 rounded-full border border-border/40 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span>{formattedDate}</span>
+        </div>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

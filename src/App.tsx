@@ -21,6 +21,7 @@ import StaffEdit from './pages/StaffEdit';
 import PaymentCreate from './pages/PaymentCreate';
 import PromoCodeCreate from './pages/PromoCodeCreate';
 import StaffView from './pages/StaffView';
+import Settings from './pages/Settings';
 
 const queryClient = new QueryClient();
 
@@ -169,6 +170,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <PromoCodeCreate />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />

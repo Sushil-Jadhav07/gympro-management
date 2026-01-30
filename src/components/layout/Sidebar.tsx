@@ -246,6 +246,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
             <Button
               variant="ghost"
               size={isCollapsed ? "icon" : "sm"}
+              onClick={() => navigate('/settings')}
               className={cn(
                 "rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] transition-all",
                 !isCollapsed && "flex-1 justify-start gap-2"

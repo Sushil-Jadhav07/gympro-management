@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Staff, UserRole, WorkSchedule } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Staff, UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Search,
-  Plus,
   Edit,
   Trash2,
-  Eye,
   UserPlus,
   Calendar,
   Phone,
@@ -28,10 +22,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
-import { DialogHeader } from '../ui/dialog';
 import PageLoader from '../ui/PageLoader';
 
 type SupabaseStaffRow = {
@@ -53,12 +45,10 @@ type SupabaseStaffRow = {
 };
 const StaffManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to convert Supabase staff to Staff interface
@@ -158,6 +148,12 @@ const StaffManagement: React.FC = () => {
       return years - 1;
     }
     return years;
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    const first = firstName?.[0] || '';
+    const last = lastName?.[0] || '';
+    return `${first}${last}`.toUpperCase();
   };
 
   const filteredStaff = staff.filter(member => {
@@ -294,106 +290,54 @@ const StaffManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-gray-50/80 backdrop-blur-sm">
-              <TableRow className="border-gray-100 hover:bg-transparent">
-                <TableHead className="w-[300px] font-semibold text-gray-500 py-5 pl-8 text-xs uppercase tracking-wider">Staff Member</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Role & Department</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Join Date</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Status</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-right pr-8 text-xs uppercase tracking-wider">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStaff.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-16 text-gray-500">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
-                        <Users className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <p className="text-lg font-medium text-gray-900">No staff members found</p>
-                      <p className="text-sm text-gray-500">Try adjusting your search or filters.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredStaff.map((staffMember, index) => (
-                  <motion.tr
+        <div className="p-6">
+          {filteredStaff.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
+                  <Users className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-lg font-medium text-gray-900">No staff members found</p>
+                <p className="text-sm text-gray-500">Try adjusting your search or filters.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredStaff.map((staffMember, index) => {
+                const tenureYears = calculateTenure(staffMember.hireDate);
+                const salaryLabel = staffMember.salary ? `$${staffMember.salary.toLocaleString()}` : 'N/A';
+
+                return (
+                  <motion.div
                     key={staffMember.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    className="border-gray-50 hover:bg-[#00bc7d]/[0.02] transition-colors group"
+                    className="rounded-3xl bg-white border border-gray-100 shadow-xl shadow-gray-100/50 p-6 flex flex-col gap-5"
                   >
-                    <TableCell className="py-5 pl-8">
-                      <div className="flex items-center space-x-4">
-                        <div className="relative">
-                          <Avatar className="h-12 w-12 ring-2 ring-white shadow-md group-hover:ring-[#00bc7d]/20 transition-all">
-                            <AvatarImage src={staffMember.avatar} />
-                            <AvatarFallback className="bg-gradient-to-br from-[#00bc7d] to-[#009664] text-white font-bold text-lg">
-                              {staffMember.firstName[0]}{staffMember.lastName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-[#00bc7d]"></span>
-                        </div>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-14 w-14 ring-2 ring-white shadow-md">
+                          <AvatarImage src={staffMember.avatar} />
+                          <AvatarFallback className="bg-gradient-to-br from-[#00bc7d] to-[#009664] text-white font-bold text-lg">
+                            {getInitials(staffMember.firstName, staffMember.lastName)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
-                          <div className="font-bold text-gray-900 text-base group-hover:text-[#00bc7d] transition-colors">
+                          <p className="text-lg font-bold text-gray-900">
                             {staffMember.firstName} {staffMember.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500 flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {staffMember.email}
-                          </div>
+                          </p>
+                          <p className="text-sm text-gray-500">{staffMember.position || staffMember.department}</p>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="py-5">
-                      <div className="flex flex-col gap-1.5">
-                        <Badge variant="outline" className={`${getRoleColor(staffMember.role)} border-0 font-medium w-fit px-2.5 py-0.5 rounded-lg shadow-sm`}>
-                          {staffMember.role}
-                        </Badge>
-                        <span className="text-xs text-gray-500 font-medium ml-1">
-                          {staffMember.department}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="text-gray-900 font-medium flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                          {staffMember.hireDate.toLocaleDateString()}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {calculateTenure(staffMember.hireDate)} years tenure
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#00bc7d] animate-pulse"></span>
-                        Active
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5 text-right pr-8">
-                      <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/staff/${staffMember.id}`)}
-                          className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] hover:scale-105 transition-all"
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center gap-1">
                         {hasRole(UserRole.MANAGER) && (
                           <>
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => navigate(`/staff/${staffMember.id}/edit`)}
-                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] hover:scale-105 transition-all"
+                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] transition-all"
                               title="Edit Staff"
                             >
                               <Edit className="h-4 w-4" />
@@ -402,7 +346,7 @@ const StaffManagement: React.FC = () => {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDeleteStaff(staffMember.id)}
-                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-600 hover:scale-105 transition-all"
+                              className="h-9 w-9 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all"
                               title="Delete Staff"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -410,25 +354,68 @@ const StaffManagement: React.FC = () => {
                           </>
                         )}
                       </div>
-                    </TableCell>
-                  </motion.tr>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm">
+                      <Badge className={`${getRoleColor(staffMember.role)} border px-2.5 py-0.5 rounded-full text-xs font-semibold`}>
+                        {staffMember.role}
+                      </Badge>
+                      <Badge className={`${getDepartmentColor(staffMember.department)} border px-2.5 py-0.5 rounded-full text-xs font-semibold`}>
+                        {staffMember.department}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                        <div className="flex items-center gap-2 text-gray-900 font-semibold">
+                          <Clock className="h-4 w-4 text-[#00bc7d]" />
+                          {tenureYears} yrs
+                        </div>
+                        <p className="text-xs text-gray-500">Tenure</p>
+                      </div>
+                      <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3">
+                        <div className="flex items-center gap-2 text-gray-900 font-semibold">
+                          <DollarSign className="h-4 w-4 text-[#00bc7d]" />
+                          {salaryLabel}
+                        </div>
+                        <p className="text-xs text-gray-500">Salary</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                        <span>{staffMember.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        <span>{staffMember.phone || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        className="flex-1 rounded-xl h-11 border-gray-200 text-gray-700 hover:border-[#00bc7d] hover:text-[#00bc7d] hover:bg-[#00bc7d]/5"
+                        onClick={() => navigate(`/staff/${staffMember.id}`)}
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Schedule
+                      </Button>
+                      <Button
+                        className="flex-1 rounded-xl h-11 bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-lg shadow-[#00bc7d]/20"
+                        onClick={() => navigate(`/staff/${staffMember.id}`)}
+                      >
+                        View Profile
+                      </Button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </motion.div>
-
-      {/* Staff Details Dialog */}
-      {/* <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-3xl rounded-2xl border-0 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Staff Details</DialogTitle>
-          </DialogHeader>
-          {selectedStaff && <StaffDetailsDailog staff={selectedStaff} />}
-        </DialogContent>
-      </Dialog> */}
-
     </div>
   );
 };

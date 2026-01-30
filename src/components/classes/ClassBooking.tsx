@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Class, ClassSchedule, Booking, UserRole } from '@/types';
-import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Class, ClassSchedule, UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Clock,
   Users,
   MapPin,
   Plus,
   Search,
-  User,
   Calendar as CalendarIcon,
   Sparkles
 } from 'lucide-react';
@@ -29,9 +26,7 @@ import PageLoader from '../ui/PageLoader';
 const ClassBooking: React.FC = () => {
   const navigate = useNavigate();
   const { user, hasRole } = useAuth();
-  const [classes, setClasses] = useState<Class[]>([]);
   const [classSchedules, setClassSchedules] = useState<ClassSchedule[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedClass, setSelectedClass] = useState<ClassSchedule | null>(null);
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -123,8 +118,6 @@ const ClassBooking: React.FC = () => {
             isActive: c.is_active
           };
         });
-
-        setClasses(mappedClasses);
 
         // 3. Fetch Rooms (mock)
         const roomsMap = new Map();
@@ -248,11 +241,20 @@ const ClassBooking: React.FC = () => {
     }
   };
 
-  const getAvailabilityColor = (schedule: ClassSchedule) => {
-    const availableSpots = schedule.class.capacity - schedule.bookedCount;
-    if (availableSpots === 0) return 'bg-red-50 text-red-600 border-red-100';
-    if (availableSpots < 5) return 'bg-orange-50 text-orange-600 border-orange-100';
-    return 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20';
+  const getStatusBadge = (schedule: ClassSchedule, availableSpots: number) => {
+    if (schedule.status?.toLowerCase() === 'cancelled') {
+      return { label: 'Cancelled', className: 'bg-red-50 text-red-600 border-red-100' };
+    }
+    if (availableSpots === 0) {
+      return { label: 'Full', className: 'bg-orange-50 text-orange-600 border-orange-100' };
+    }
+    return { label: 'Open', className: 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20' };
+  };
+
+  const getInitials = (firstName: string, lastName: string) => {
+    const first = firstName?.[0] || '';
+    const last = lastName?.[0] || '';
+    return `${first}${last}`.toUpperCase();
   };
 
   return (
@@ -320,128 +322,132 @@ const ClassBooking: React.FC = () => {
           </div>
         </div>
 
-        {/* Classes Table */}
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-gray-50/80 backdrop-blur-sm">
-              <TableRow className="border-gray-100 hover:bg-transparent">
-                <TableHead className="font-semibold text-gray-500 py-5 pl-8 text-xs uppercase tracking-wider">Class</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Instructor</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Schedule</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Location</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Difficulty</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Availability</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-xs uppercase tracking-wider">Price</TableHead>
-                <TableHead className="font-semibold text-gray-500 py-5 text-right pr-8 text-xs uppercase tracking-wider">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#00bc7d]"></div>
-                      <span className="mt-4 text-gray-500 font-medium">Loading classes...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredSchedules.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-16 text-gray-500">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
-                        <CalendarIcon className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <p className="text-lg font-medium text-gray-900">No classes found</p>
-                      <p className="text-sm text-gray-500">Try adjusting your search or filters to find what you're looking for.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredSchedules.map((schedule, index) => {
-                  const availableSpots = schedule.class.capacity - schedule.bookedCount;
-                  const isFullyBooked = availableSpots === 0;
+        {/* Classes Cards */}
+        <div className="p-6">
+          {filteredSchedules.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-4 bg-gray-50 rounded-full border border-gray-100">
+                  <CalendarIcon className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-lg font-medium text-gray-900">No classes found</p>
+                <p className="text-sm text-gray-500">Try adjusting your search or filters to find what you're looking for.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredSchedules.map((schedule, index) => {
+                const availableSpots = schedule.class.capacity - schedule.bookedCount;
+                const isFullyBooked = availableSpots === 0;
+                const statusBadge = getStatusBadge(schedule, availableSpots);
+                const progress = Math.min(100, Math.round((schedule.bookedCount / schedule.class.capacity) * 100));
 
-                  return (
-                    <motion.tr
-                      key={schedule.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="border-gray-50 hover:bg-[#00bc7d]/[0.02] transition-colors group"
-                    >
-                      <TableCell className="py-5 pl-8">
-                        <div>
-                          <div className="font-bold text-gray-900 text-base group-hover:text-[#00bc7d] transition-colors">{schedule.class.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {schedule.class.duration} minutes
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <div className="flex items-center space-x-2">
-                          <div className="p-2 bg-gray-100 rounded-full">
-                            <User className="h-4 w-4 text-gray-500" />
-                          </div>
-                          <span className="font-medium text-gray-700">
-                            {schedule.class.instructor.firstName} {schedule.class.instructor.lastName}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <div className="text-sm">
-                          <div className="flex items-center space-x-1 font-medium text-gray-900">
-                            <Clock className="h-3.5 w-3.5 text-[#00bc7d]" />
-                            <span>{schedule.startTime} - {schedule.endTime}</span>
-                          </div>
-                          <div className="text-gray-500 pl-4.5">
-                            {schedule.date.toLocaleDateString()}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="h-3.5 w-3.5 text-gray-400" />
-                          <span className="text-sm text-gray-600">{schedule.room.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <Badge className={`${getDifficultyColor(schedule.class.difficulty)} border-0 px-3 py-1`}>
+                return (
+                  <motion.div
+                    key={schedule.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="rounded-3xl bg-white border border-gray-100 shadow-xl shadow-gray-100/50 p-6 flex flex-col gap-5"
+                  >
+                    <div className="flex items-start justify-between">
+                      <Badge className={`${statusBadge.className} border px-3 py-1 rounded-full text-xs font-semibold`}>
+                        {statusBadge.label}
+                      </Badge>
+                      <button
+                        type="button"
+                        className="h-10 w-10 rounded-xl bg-[#00bc7d]/10 border border-[#00bc7d]/20 flex items-center justify-center text-[#00bc7d] hover:bg-[#00bc7d]/20 transition-colors"
+                        aria-label="Add to calendar"
+                      >
+                        <CalendarIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">{schedule.class.name}</h3>
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <span>{schedule.class.category}</span>
+                        <Badge className={`${getDifficultyColor(schedule.class.difficulty)} border px-2 py-0.5 text-[11px] font-semibold`}>
                           {schedule.class.difficulty}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <div className="space-y-1">
-                          <Badge variant="outline" className={`${getAvailabilityColor(schedule)} border rounded-full px-3 py-1`}>
-                            {availableSpots} spots left
-                          </Badge>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Clock className="h-4 w-4 text-[#00bc7d]" />
+                        <span className="font-medium text-gray-900">
+                          {schedule.startTime} - {schedule.endTime}
+                        </span>
+                        <span className="text-gray-500">({schedule.class.duration} min)</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium text-gray-900">
+                              {schedule.bookedCount}/{schedule.class.capacity} enrolled
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500">{availableSpots} spots left</span>
                         </div>
-                      </TableCell>
-                      <TableCell className="py-5">
-                        <div className="font-bold text-gray-900">${schedule.class.price}</div>
-                      </TableCell>
-                      <TableCell className="py-5 text-right pr-8">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedClass(schedule);
-                            setIsBookingDialogOpen(true);
-                          }}
-                          disabled={isFullyBooked && !hasRole(UserRole.STAFF)}
-                          className={`rounded-xl shadow-md transition-all ${isFullyBooked
-                            ? 'bg-orange-100 text-orange-600 hover:bg-orange-200'
-                            : 'bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-[#00bc7d]/20'
-                            }`}
-                        >
-                          {isFullyBooked ? 'Join Waitlist' : 'Book Now'}
-                        </Button>
-                      </TableCell>
-                    </motion.tr>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                        <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className="h-full bg-[#00bc7d] rounded-full transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span className="font-medium text-gray-900">{schedule.room.name}</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-[#00bc7d]/10 border border-[#00bc7d]/20 flex items-center justify-center text-[#00bc7d] text-xs font-bold">
+                          {getInitials(schedule.class.instructor.firstName, schedule.class.instructor.lastName)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {schedule.class.instructor.firstName} {schedule.class.instructor.lastName}
+                          </p>
+                          <p className="text-xs text-gray-500">Instructor</p>
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-gray-900">${schedule.class.price}</div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Button
+                        onClick={() => {
+                          setSelectedClass(schedule);
+                          setIsBookingDialogOpen(true);
+                        }}
+                        disabled={isFullyBooked && !hasRole(UserRole.STAFF)}
+                        className={`flex-1 rounded-xl h-11 shadow-md transition-all ${isFullyBooked
+                          ? 'bg-orange-100 text-orange-600 hover:bg-orange-200'
+                          : 'bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-[#00bc7d]/20'
+                          }`}
+                      >
+                        {isFullyBooked ? 'Join Waitlist' : 'Book Now'}
+                      </Button>
+                      <button
+                        type="button"
+                        className="h-11 w-11 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+                        aria-label="Quick action"
+                      >
+                        <Plus className="h-4 w-4 mx-auto" />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </motion.div>
 
