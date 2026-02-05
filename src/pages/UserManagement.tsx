@@ -63,6 +63,8 @@ const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [pendingDeleteUserId, setPendingDeleteUserId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
@@ -104,16 +106,19 @@ const UserManagement: React.FC = () => {
     return <PageLoader />;
   }
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) {
-      return;
-    }
+  const openDeleteDialog = (userId: string) => {
+    setPendingDeleteUserId(userId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const executeDeleteUser = async () => {
+    if (!pendingDeleteUserId) return;
 
     try {
       const { error } = await supabase
         .from('users')
         .delete()
-        .eq('id', userId);
+        .eq('id', pendingDeleteUserId);
 
       if (error) {
         console.error('Error deleting user:', error);
@@ -121,8 +126,10 @@ const UserManagement: React.FC = () => {
         return;
       }
 
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      setUsers(prev => prev.filter(u => u.id !== pendingDeleteUserId));
       toast.success('User deleted successfully');
+      setIsDeleteDialogOpen(false);
+      setPendingDeleteUserId(null);
     } catch (error) {
       console.error('Error deleting user:', error);
       toast.error('Failed to delete user');
@@ -388,7 +395,7 @@ const UserManagement: React.FC = () => {
                                     <DropdownMenuContent align="end">
                                       <DropdownMenuItem
                                         className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                        onClick={() => handleDeleteUser(user.id)}
+                                        onClick={() => openDeleteDialog(user.id)}
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
                                         Delete User

@@ -6,6 +6,7 @@ import { Staff, UserRole } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
@@ -102,7 +103,9 @@ const StaffEdit: React.FC = () => {
     position: '',
     department: '',
     salary: '',
-    role: UserRole.STAFF as UserRole
+    role: UserRole.STAFF as UserRole,
+    bio: '',
+    specializations: ''
   });
 
   useEffect(() => {
@@ -115,7 +118,9 @@ const StaffEdit: React.FC = () => {
         position: staff.position,
         department: staff.department,
         salary: staff.salary.toString(),
-        role: staff.role
+        role: staff.role,
+        bio: staff.bio || '',
+        specializations: staff.specializations ? staff.specializations.join(', ') : ''
       });
     }
   }, [staff]);
@@ -138,6 +143,11 @@ const StaffEdit: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const specializationsArray = formData.specializations
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
       const { error } = await supabase
         .from('staff')
         .update({
@@ -149,6 +159,8 @@ const StaffEdit: React.FC = () => {
           department: formData.department,
           salary: parseFloat(formData.salary), // Ensure number is sent
           role: formData.role, // Remove unnecessary toUpperCase if it's already enum
+          bio: formData.bio || null,
+          specializations: specializationsArray,
           updated_at: new Date().toISOString()
         })
         .eq('id', staff?.id);
@@ -363,11 +375,38 @@ const StaffEdit: React.FC = () => {
                                 <SelectItem value={UserRole.MANAGER}>Manager</SelectItem>
                               </SelectContent>
                             </Select>
+                        </div>
+                      </div>
+
+                      {formData.role === UserRole.TRAINER && (
+                        <div className="space-y-6 pt-6 border-t border-gray-100">
+                          <div className="space-y-2">
+                            <Label htmlFor="specializations">Specializations</Label>
+                            <Input 
+                              id="specializations" 
+                              placeholder="e.g. HIIT, Yoga, Weight Training (comma separated)"
+                              value={formData.specializations}
+                              onChange={(e) => setFormData({...formData, specializations: e.target.value})}
+                              className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                            />
+                            <p className="text-xs text-muted-foreground">Separate multiple specializations with commas</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="bio">Professional Bio</Label>
+                            <Textarea 
+                              id="bio" 
+                              placeholder="Brief professional biography..."
+                              value={formData.bio}
+                              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                              className="min-h-[100px] focus-visible:ring-[#00bc7d] rounded-xl border-gray-200 resize-none"
+                            />
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
                 </div>
 
                 {/* Right Column - Compensation & Summary */}

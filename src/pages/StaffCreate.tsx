@@ -6,6 +6,7 @@ import { UserRole } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -41,7 +42,9 @@ const StaffCreate: React.FC = () => {
     position: '',
     department: '',
     salary: '',
-    role: UserRole.STAFF
+    role: UserRole.STAFF,
+    bio: '',
+    specializations: ''
   });
 
   const containerVariants = {
@@ -65,6 +68,11 @@ const StaffCreate: React.FC = () => {
     try {
       const employeeId = `EMP${String(Date.now()).slice(-3)}`;
       
+      const specializationsArray = formData.specializations
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
       const { error } = await supabase
         .from('staff')
         .insert({
@@ -80,7 +88,8 @@ const StaffCreate: React.FC = () => {
           salary: parseFloat(formData.salary).toString(),
           hire_date: new Date().toISOString().split('T')[0],
           certifications: [],
-          specializations: []
+          specializations: specializationsArray,
+          bio: formData.bio || null
         });
 
       if (error) {
@@ -276,6 +285,33 @@ const StaffCreate: React.FC = () => {
                           </Select>
                         </div>
                       </div>
+
+                      {formData.role === UserRole.TRAINER && (
+                        <div className="space-y-6 pt-6 border-t border-gray-100">
+                          <div className="space-y-2">
+                            <Label htmlFor="specializations">Specializations</Label>
+                            <Input 
+                              id="specializations" 
+                              placeholder="e.g. HIIT, Yoga, Weight Training (comma separated)"
+                              value={formData.specializations}
+                              onChange={(e) => setFormData({...formData, specializations: e.target.value})}
+                              className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                            />
+                            <p className="text-xs text-muted-foreground">Separate multiple specializations with commas</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="bio">Professional Bio</Label>
+                            <Textarea 
+                              id="bio" 
+                              placeholder="Brief professional biography..."
+                              value={formData.bio}
+                              onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                              className="min-h-[100px] focus-visible:ring-[#00bc7d] rounded-xl border-gray-200 resize-none"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>

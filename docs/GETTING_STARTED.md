@@ -5,7 +5,7 @@ This guide will help you understand the codebase structure and how components ar
 ## Project Structure
 
 ```
-workspace/shadcn-ui/
+workspace/gympro-management/
 ├── src/
 │   ├── components/
 │   │   ├── layout/          # Sidebar, Topbar
@@ -15,13 +15,14 @@ workspace/shadcn-ui/
 │   │   ├── payments/        # PaymentSystem, PaymentStatus
 │   │   ├── analytics/       # AnalyticsDashboard
 │   │   └── ui/              # Reusable UI components
-│   ├── pages/               # Dashboard, Login
+│   ├── pages/               # Dashboard, Login, Settings, Profile, Users...
 │   ├── contexts/            # AuthContext
-│   ├── hooks/               # useAuth
+│   ├── hooks/               # useAuth, use-mobile, use-toast
 │   ├── types/               # TypeScript definitions
-│   ├── lib/                 # Utilities, API client
+│   ├── lib/                 # Utilities, Supabase client, Auth utils
 │   └── App.tsx              # Root component
 └── docs/                    # Documentation
+    ├── project-documentation/ # Detailed project docs
     ├── layout/              # Layout component docs
     ├── pages/               # Page component docs
     ├── features/            # Feature component docs

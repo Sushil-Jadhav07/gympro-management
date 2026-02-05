@@ -89,9 +89,22 @@ All test users have password: **"password"**
 ## Routes
 
 - `/login` - Login page (public)
-- `/users` - User management (admin only)
 - `/dashboard` - Main dashboard (authenticated)
 - `/profile` - User profile (authenticated)
+- `/settings` - Application settings
+- `/users` - User management (admin only)
+  - `/users/new` - Create user
+  - `/users/:id` - View user details
+  - `/users/:id/edit` - Edit user
+- `/members/new` - Create member
+- `/members/:id` - View member
+- `/members/:id/edit` - Edit member
+- `/classes/new` - Create class
+- `/staff/new` - Create staff
+- `/staff/:id` - View staff
+- `/staff/:id/edit` - Edit staff
+- `/payments/new` - Create payment
+- `/promocodes/new` - Create promo code
 
 ## Features
 

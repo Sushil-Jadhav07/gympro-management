@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +23,22 @@ import {
   Tag,
   Layers
 } from 'lucide-react';
+import { supabase, DEFAULT_GYM_ID } from '@/lib/supabase';
+import { Trainer } from '@/types';
+
+type SupabaseTrainerRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  specialization?: string[] | null;
+  bio?: string | null;
+  profile_image?: string | null;
+  gym_id?: string;
+  created_at: string;
+  updated_at: string;
+};
 
 const ClassCreate: React.FC = () => {
   const { hasRole } = useAuth();
@@ -35,7 +51,7 @@ const ClassCreate: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    instructorId: '3', // Default to a trainer for now
+    instructorId: '',
     duration: '60',
     capacity: '20',
     category: '',
@@ -48,6 +64,51 @@ const ClassCreate: React.FC = () => {
   });
 
   const [equipmentInput, setEquipmentInput] = useState('');
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [isLoadingTrainers, setIsLoadingTrainers] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      try {
+        setIsLoadingTrainers(true);
+        const { data, error } = await supabase
+          .from('staff')
+          .select('*')
+          .eq('role', 'TRAINER')
+          .order('first_name');
+
+        if (error) {
+          console.error('Error fetching trainers:', error);
+          toast.error('Failed to load trainers');
+          return;
+        }
+
+        if (data) {
+          const mappedTrainers: Trainer[] = data.map((t: SupabaseTrainerRow) => ({
+            id: t.id,
+            firstName: t.first_name,
+            lastName: t.last_name,
+            email: t.email,
+            phone: t.phone,
+            specialization: t.specializations,
+            bio: t.bio,
+            profileImage: t.profile_image,
+            gymId: t.gym_id,
+            createdAt: new Date(t.created_at),
+            updatedAt: new Date(t.updated_at)
+          }));
+          setTrainers(mappedTrainers);
+        }
+      } catch (error) {
+        console.error('Error fetching trainers:', error);
+      } finally {
+        setIsLoadingTrainers(false);
+      }
+    };
+
+    fetchTrainers();
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -83,19 +144,71 @@ const ClassCreate: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    // Simulate API call
-    toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1500)),
-      {
-        loading: 'Creating class...',
-        success: () => {
-          navigate('/dashboard?tab=classes');
-          return 'Class created successfully!';
-        },
-        error: 'Failed to create class'
+    try {
+      // 1. Create Class
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .insert({
+          gym_id: DEFAULT_GYM_ID,
+          name: formData.name,
+          description: formData.description,
+          instructor_id: formData.instructorId || null,
+          capacity: parseInt(formData.capacity),
+          duration: parseInt(formData.duration),
+          price: parseFloat(formData.price),
+          category: formData.category,
+          difficulty: formData.difficulty,
+          equipment: formData.equipment,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (classError) throw classError;
+
+      // 2. Create Schedule (Optional: if time is provided)
+      if (formData.startTime && formData.endTime && classData) {
+        // Just creating one schedule for today/tomorrow as an example or based on input
+        // Since the UI only asks for startTime/endTime but not date, let's assume it's a template
+        // or we create one instance for tomorrow.
+        // For now, let's create one instance for tomorrow at the given time.
+        
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dateStr = tomorrow.toISOString().split('T')[0];
+        
+        const { error: scheduleError } = await supabase
+          .from('class_schedules')
+          .insert({
+            gym_id: DEFAULT_GYM_ID,
+            class_id: classData.id,
+            date: dateStr,
+            start_time: formData.startTime,
+            end_time: formData.endTime,
+            room_id: null, // Default or select
+            booked_count: 0,
+            waitlist_count: 0,
+            status: 'scheduled'
+          });
+
+        if (scheduleError) {
+          console.warn('Error creating schedule:', scheduleError);
+          // Don't fail the whole process if schedule fails, but warn
+          toast.warning('Class created but schedule creation failed');
+        }
       }
-    );
+
+      toast.success('Class created successfully!');
+      navigate('/dashboard?tab=classes');
+    } catch (error: unknown) {
+      console.error('Error creating class:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create class';
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -204,11 +317,12 @@ const ClassCreate: React.FC = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Yoga">Yoga</SelectItem>
-                              <SelectItem value="Cardio">Cardio</SelectItem>
-                              <SelectItem value="Strength">Strength</SelectItem>
-                              <SelectItem value="Pilates">Pilates</SelectItem>
-                              <SelectItem value="Dance">Dance</SelectItem>
                               <SelectItem value="HIIT">HIIT</SelectItem>
+                              <SelectItem value="Strength">Strength</SelectItem>
+                              <SelectItem value="Cardio">Cardio</SelectItem>
+                              <SelectItem value="Pilates">Pilates</SelectItem>
+                              <SelectItem value="Boxing">Boxing</SelectItem>
+                              <SelectItem value="Dance">Dance</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -220,7 +334,7 @@ const ClassCreate: React.FC = () => {
                             onValueChange={(value) => setFormData({...formData, difficulty: value})}
                           >
                             <SelectTrigger className="h-11 focus:ring-[#00bc7d] rounded-xl border-gray-200">
-                              <SelectValue placeholder="Select Level" />
+                              <SelectValue placeholder="Select Difficulty" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="Beginner">Beginner</SelectItem>
@@ -229,123 +343,81 @@ const ClassCreate: React.FC = () => {
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
 
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea 
-                            id="description" 
-                            placeholder="Describe what members can expect..." 
-                            value={formData.description}
-                            onChange={(e) => setFormData({...formData, description: e.target.value})}
-                            className="min-h-[100px] focus-visible:ring-[#00bc7d] rounded-xl border-gray-200 transition-all resize-none"
-                            required
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea 
+                          id="description" 
+                          placeholder="Describe the class content, goals, and what to expect..." 
+                          value={formData.description}
+                          onChange={(e) => setFormData({...formData, description: e.target.value})}
+                          className="min-h-[120px] focus-visible:ring-[#00bc7d] rounded-xl border-gray-200 transition-all"
+                        />
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
 
-                {/* Class Details */}
+                {/* Instructor & Schedule */}
                 <motion.div variants={itemVariants}>
                   <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl">
                     <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 pb-4">
                       <div className="flex items-center gap-2">
                         <div className="p-2 bg-[#00bc7d]/10 rounded-lg">
-                          <Layers className="h-5 w-5 text-[#00bc7d]" />
+                          <Users className="h-5 w-5 text-[#00bc7d]" />
                         </div>
-                        <CardTitle className="text-lg font-semibold text-gray-900">Class Details</CardTitle>
+                        <CardTitle className="text-lg font-semibold text-gray-900">Instructor & Schedule</CardTitle>
                       </div>
-                      <CardDescription>Capacity, duration, and pricing</CardDescription>
+                      <CardDescription>Who is teaching and when</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="capacity">Capacity (People)</Label>
-                          <div className="relative">
-                            <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input 
-                              id="capacity" 
-                              type="number"
-                              value={formData.capacity}
-                              onChange={(e) => setFormData({...formData, capacity: e.target.value})}
-                              className="pl-10 h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
-                              required
-                            />
-                          </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="instructor">Trainer</Label>
+                          <Select 
+                            value={formData.instructorId} 
+                            onValueChange={(value) => setFormData({...formData, instructorId: value})}
+                          >
+                            <SelectTrigger className="h-11 focus:ring-[#00bc7d] rounded-xl border-gray-200">
+                              <SelectValue placeholder={isLoadingTrainers ? "Loading trainers..." : "Select Trainer"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {trainers.map(trainer => (
+                                <SelectItem key={trainer.id} value={trainer.id}>
+                                  {trainer.firstName} {trainer.lastName} {trainer.specialization && trainer.specialization.length > 0 ? `(${trainer.specialization[0]})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="duration">Duration (Minutes)</Label>
+                          <Label htmlFor="startTime">Start Time</Label>
                           <div className="relative">
                             <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input 
-                              id="duration" 
-                              type="number"
-                              value={formData.duration}
-                              onChange={(e) => setFormData({...formData, duration: e.target.value})}
+                              id="startTime" 
+                              type="time" 
+                              value={formData.startTime}
+                              onChange={(e) => setFormData({...formData, startTime: e.target.value})}
                               className="pl-10 h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
-                              required
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="price">Price ($)</Label>
+                          <Label htmlFor="endTime">End Time</Label>
                           <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input 
-                              id="price" 
-                              type="number"
-                              value={formData.price}
-                              onChange={(e) => setFormData({...formData, price: e.target.value})}
+                              id="endTime" 
+                              type="time" 
+                              value={formData.endTime}
+                              onChange={(e) => setFormData({...formData, endTime: e.target.value})}
                               className="pl-10 h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
-                              required
                             />
                           </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Equipment Needed</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            value={equipmentInput}
-                            onChange={(e) => setEquipmentInput(e.target.value)}
-                            placeholder="Add equipment (e.g. Yoga Mat)"
-                            className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleAddEquipment();
-                              }
-                            }}
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={handleAddEquipment}
-                            variant="secondary"
-                            className="h-11 px-6 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-900"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {formData.equipment.map((item, index) => (
-                            <div 
-                              key={index}
-                              className="bg-[#00bc7d]/10 text-[#00bc7d] px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-2 border border-[#00bc7d]/20"
-                            >
-                              {item}
-                              <button 
-                                type="button"
-                                onClick={() => handleRemoveEquipment(item)}
-                                className="hover:text-[#00bc7d]/80 transition-colors"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
                         </div>
                       </div>
                     </CardContent>
@@ -353,79 +425,60 @@ const ClassCreate: React.FC = () => {
                 </motion.div>
               </div>
 
-              {/* Right Column - Schedule & Summary */}
+              {/* Right Column - Details */}
               <div className="space-y-8">
-                
-                {/* Schedule Card */}
+                {/* Capacity & Pricing */}
                 <motion.div variants={itemVariants}>
-                  <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl h-full">
+                  <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl">
                     <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 pb-4">
                       <div className="flex items-center gap-2">
                         <div className="p-2 bg-[#00bc7d]/10 rounded-lg">
-                          <CalendarIcon className="h-5 w-5 text-[#00bc7d]" />
+                          <DollarSign className="h-5 w-5 text-[#00bc7d]" />
                         </div>
-                        <CardTitle className="text-lg text-gray-900">Schedule</CardTitle>
+                        <CardTitle className="text-lg font-semibold text-gray-900">Capacity & Pricing</CardTitle>
                       </div>
-                      <CardDescription>Set the time and location</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
                       <div className="space-y-2">
-                        <Label htmlFor="startTime">Start Time</Label>
+                        <Label htmlFor="price">Price per Session ($)</Label>
                         <Input 
-                          id="startTime" 
-                          type="time"
-                          value={formData.startTime}
-                          onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                          id="price" 
+                          type="number" 
+                          min="0"
+                          step="0.01"
+                          value={formData.price}
+                          onChange={(e) => setFormData({...formData, price: e.target.value})}
                           className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
-                          required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="endTime">End Time</Label>
+                        <Label htmlFor="capacity">Max Capacity</Label>
                         <Input 
-                          id="endTime" 
-                          type="time"
-                          value={formData.endTime}
-                          onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                          id="capacity" 
+                          type="number" 
+                          min="1"
+                          value={formData.capacity}
+                          onChange={(e) => setFormData({...formData, capacity: e.target.value})}
                           className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
-                          required
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="roomId">Room / Location</Label>
+                        <Label htmlFor="duration">Duration (minutes)</Label>
                         <Select 
-                          value={formData.roomId} 
-                          onValueChange={(value) => setFormData({...formData, roomId: value})}
+                          value={formData.duration} 
+                          onValueChange={(value) => setFormData({...formData, duration: value})}
                         >
                           <SelectTrigger className="h-11 focus:ring-[#00bc7d] rounded-xl border-gray-200">
-                            <SelectValue placeholder="Select Room" />
+                            <SelectValue placeholder="Select Duration" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1">Studio A (Capacity: 25)</SelectItem>
-                            <SelectItem value="2">Fitness Room (Capacity: 20)</SelectItem>
-                            <SelectItem value="3">Weight Room (Capacity: 15)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <Separator className="my-4" />
-
-                      <div className="space-y-2">
-                        <Label htmlFor="instructor">Instructor</Label>
-                        <Select 
-                          value={formData.instructorId} 
-                          onValueChange={(value) => setFormData({...formData, instructorId: value})}
-                        >
-                          <SelectTrigger className="h-11 focus:ring-[#00bc7d] rounded-xl border-gray-200">
-                            <SelectValue placeholder="Select Instructor" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="3">Sarah Wilson (Yoga)</SelectItem>
-                            <SelectItem value="4">Mike Johnson (HIIT)</SelectItem>
-                            <SelectItem value="5">Lisa Davis (Strength)</SelectItem>
-                            <SelectItem value="6">Emma Brown (Pilates)</SelectItem>
+                            <SelectItem value="30">30 minutes</SelectItem>
+                            <SelectItem value="45">45 minutes</SelectItem>
+                            <SelectItem value="60">60 minutes</SelectItem>
+                            <SelectItem value="90">90 minutes</SelectItem>
+                            <SelectItem value="120">120 minutes</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -433,26 +486,73 @@ const ClassCreate: React.FC = () => {
                   </Card>
                 </motion.div>
 
-                {/* Summary / Actions */}
+                {/* Equipment */}
                 <motion.div variants={itemVariants}>
-                  <Card className="border-0 shadow-xl shadow-[#00bc7d]/5 bg-white overflow-hidden rounded-2xl relative">
-                     <div className="absolute top-0 right-0 p-32 bg-[#00bc7d]/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-                    <CardContent className="p-6 relative">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm font-medium text-gray-500">Total Capacity</span>
-                        <span className="text-lg font-bold text-gray-900">{formData.capacity || 0}</span>
+                  <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl">
+                    <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 pb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 bg-[#00bc7d]/10 rounded-lg">
+                          <Layers className="h-5 w-5 text-[#00bc7d]" />
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-gray-900">Equipment</CardTitle>
                       </div>
-                      <div className="flex items-center justify-between mb-6">
-                        <span className="text-sm font-medium text-gray-500">Est. Duration</span>
-                        <span className="text-lg font-bold text-gray-900">{formData.duration || 0} min</span>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="Add equipment..." 
+                          value={equipmentInput}
+                          onChange={(e) => setEquipmentInput(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEquipment())}
+                          className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                        />
+                        <Button 
+                          type="button"
+                          onClick={handleAddEquipment}
+                          className="h-11 w-11 p-0 rounded-xl bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white"
+                        >
+                          <CheckCircle2 className="h-5 w-5" />
+                        </Button>
                       </div>
-                      
+
+                      <div className="flex flex-wrap gap-2">
+                        {formData.equipment.map((item, index) => (
+                          <div 
+                            key={index}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm group hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer"
+                            onClick={() => handleRemoveEquipment(item)}
+                          >
+                            <span>{item}</span>
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity">×</span>
+                          </div>
+                        ))}
+                        {formData.equipment.length === 0 && (
+                          <span className="text-sm text-gray-400 italic">No equipment added yet</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                {/* Submit Buttons */}
+                <motion.div variants={itemVariants}>
+                  <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl">
+                    <CardContent className="p-6 space-y-4">
                       <Button 
                         type="submit" 
-                        className="w-full h-12 text-lg font-semibold bg-[#00bc7d] hover:bg-[#00bc7d]/90 shadow-lg shadow-[#00bc7d]/20 rounded-xl transition-all"
+                        className="w-full h-12 bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white rounded-xl shadow-lg shadow-[#00bc7d]/20 text-base font-semibold"
+                        disabled={isSubmitting}
                       >
-                        Create Class
-                        <CheckCircle2 className="ml-2 h-5 w-5" />
+                        {isSubmitting ? 'Creating Class...' : 'Create Class'}
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="w-full h-12 border-gray-200 rounded-xl hover:bg-gray-50 text-gray-700"
+                        onClick={() => navigate('/dashboard?tab=classes')}
+                        disabled={isSubmitting}
+                      >
+                        Cancel
                       </Button>
                     </CardContent>
                   </Card>

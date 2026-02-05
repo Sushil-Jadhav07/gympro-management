@@ -54,6 +54,23 @@ export interface Staff extends User {
   schedule: WorkSchedule[];
   certifications?: string[];
   specializations?: string[];
+  bio?: string;
+  profileImage?: string;
+}
+
+// Trainer interface
+export interface Trainer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  specialization?: string[];
+  bio?: string;
+  profileImage?: string;
+  gymId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Work schedule
@@ -70,7 +87,7 @@ export interface Class {
   name: string;
   description: string;
   instructorId: string;
-  instructor?: Staff;
+  instructor?: Trainer;
   capacity: number;
   duration: number; // in minutes
   price: number;
@@ -93,6 +110,7 @@ export interface Room {
 // Class schedule
 export interface ClassSchedule {
   id: string;
+  gymId: string;
   classId: string;
   class: Class;
   date: Date;
@@ -173,6 +191,7 @@ export enum PaymentStatus {
 export interface Invoice {
   id: string;
   memberId: string;
+  invoiceNumber?: string;
   amount: number;
   currency: string;
   description: string;
@@ -181,6 +200,20 @@ export interface Invoice {
   paidDate?: Date;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   items: InvoiceItem[];
+  gstin?: string;
+  businessName?: string;
+  billingAddress?: string;
+  hsnSac?: string;
+  cgstRate?: number;
+  sgstRate?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  subtotal?: number;
+  total?: number;
+  customerName?: string;
+  customerEmail?: string;
+  logoUrl?: string;
+  pdfUrl?: string;
 }
 
 export interface InvoiceItem {
@@ -188,6 +221,7 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  hsnSac?: string;
 }
 
 // Equipment interface

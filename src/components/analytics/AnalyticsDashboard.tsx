@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AnalyticsData, MemberStats, RevenueStats, ClassStats, TrainerStats } from '@/types';
+import { AnalyticsData } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +28,37 @@ const AnalyticsDashboard: React.FC = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [isLoading, setIsLoading] = useState(true);
+
+  type MemberRow = {
+    id: string;
+    status?: string | null;
+    created_at: string;
+    membership_type?: string | null;
+  };
+
+  type PaymentRow = {
+    id: string;
+    amount: number | string;
+    created_at: string;
+    status?: string | null;
+    type?: string | null;
+  };
+
+  type ClassRow = {
+    id: string;
+    name: string;
+  };
+
+  type BookingRow = {
+    id: string;
+  };
+
+  type StaffRow = {
+    id: string;
+    role?: string | null;
+    first_name: string;
+    last_name: string;
+  };
 
   // Fetch and calculate analytics data
   useEffect(() => {
@@ -72,44 +103,50 @@ const AnalyticsDashboard: React.FC = () => {
         // --- Calculate Stats ---
 
         // Member Stats
-        const totalMembers = members.length;
-        const activeMembers = members.filter((m: any) => m.status === 'ACTIVE').length;
+        const membersData = (members ?? []) as MemberRow[];
+        const paymentsData = (payments ?? []) as PaymentRow[];
+        const classesData = (classes ?? []) as ClassRow[];
+        const bookingsData = (bookings ?? []) as BookingRow[];
+        const staffData = (staff ?? []) as StaffRow[];
+
+        const totalMembers = membersData.length;
+        const activeMembers = membersData.filter((m) => m.status === 'ACTIVE').length;
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const newMembersThisMonth = members.filter((m: any) => new Date(m.created_at) >= startOfMonth).length;
+        const newMembersThisMonth = membersData.filter((m) => new Date(m.created_at) >= startOfMonth).length;
 
-        const membershipDistribution = members.reduce((acc: any, curr: any) => {
+        const membershipDistribution = membersData.reduce<Record<string, number>>((acc, curr) => {
           const type = curr.membership_type || 'Unknown';
           acc[type] = (acc[type] || 0) + 1;
           return acc;
         }, {});
 
         // Revenue Stats
-        const totalRevenue = payments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+        const totalRevenue = paymentsData.reduce((sum, p) => sum + Number(p.amount), 0);
         // Assuming 'created_at' or 'paid_date' for monthly revenue
-        const monthlyRevenue = payments
-          .filter((p: any) => new Date(p.created_at) >= startOfMonth)
-          .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+        const monthlyRevenue = paymentsData
+          .filter((p) => new Date(p.created_at) >= startOfMonth)
+          .reduce((sum, p) => sum + Number(p.amount), 0);
 
-        const outstandingPayments = payments
-          .filter((p: any) => p.status === 'PENDING' || p.status === 'OVERDUE')
-          .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+        const outstandingPayments = paymentsData
+          .filter((p) => p.status === 'PENDING' || p.status === 'OVERDUE')
+          .reduce((sum, p) => sum + Number(p.amount), 0);
 
-        const revenueByService = payments.reduce((acc: any, curr: any) => {
+        const revenueByService = paymentsData.reduce<Record<string, number>>((acc, curr) => {
           const type = curr.type || 'Other';
           acc[type] = (acc[type] || 0) + Number(curr.amount);
           return acc;
         }, {});
 
         // Class Stats
-        const totalClasses = classes.length;
+        const totalClasses = classesData.length;
         // Mocking average attendance and utilization for now as it requires complex schedule analysis
         const classStats = {
           totalClasses,
           averageAttendance: 0, // Placeholder
-          popularClasses: classes.slice(0, 5).map((c: any) => ({
+          popularClasses: classesData.slice(0, 5).map((c) => ({
             name: c.name,
-            bookings: bookings.filter((b: any) => {
+            bookings: bookingsData.filter(() => {
               // We'd need to link booking -> class_schedule -> class
               // This is hard without joining all tables. 
               // For now, we'll return mock counts or 0
@@ -120,11 +157,11 @@ const AnalyticsDashboard: React.FC = () => {
         };
 
         // Trainer Stats
-        const trainers = staff.filter((s: any) => s.role === 'TRAINER');
+        const trainers = staffData.filter((s) => s.role === 'TRAINER');
         const trainerStats = {
           totalTrainers: trainers.length,
           averageRating: 0, // Placeholder
-          topPerformers: trainers.slice(0, 3).map((t: any) => ({
+          topPerformers: trainers.slice(0, 3).map((t) => ({
             name: `${t.first_name} ${t.last_name}`,
             rating: 5.0,
             classes: 0

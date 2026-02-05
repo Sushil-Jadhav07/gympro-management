@@ -32,12 +32,35 @@ const UserEdit: React.FC = () => {
     return saved ? JSON.parse(saved) : false;
   });
 
+  const roleOptions = ['admin', 'manager', 'trainer', 'member'] as const;
+  type RoleOption = typeof roleOptions[number];
+
+  type UserRow = {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number?: string | null;
+    role: RoleOption;
+    is_active: boolean;
+  };
+
+  type UserUpdate = {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string | null;
+    role: RoleOption;
+    is_active: boolean;
+    updated_at: string;
+    password_hash?: string;
+  };
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phoneNumber: '',
-    role: 'member' as 'admin' | 'manager' | 'trainer' | 'member',
+    role: 'member' as RoleOption,
     isActive: true,
     newPassword: '',
     confirmNewPassword: ''
@@ -61,14 +84,15 @@ const UserEdit: React.FC = () => {
           return;
         }
 
+        const userRow = data as UserRow;
         setFormData(prev => ({
           ...prev,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          email: data.email,
-          phoneNumber: data.phone_number || '',
-          role: data.role,
-          isActive: data.is_active
+          firstName: userRow.first_name,
+          lastName: userRow.last_name,
+          email: userRow.email,
+          phoneNumber: userRow.phone_number || '',
+          role: userRow.role,
+          isActive: userRow.is_active
         }));
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -99,7 +123,7 @@ const UserEdit: React.FC = () => {
     try {
       setIsSaving(true);
 
-      const updates: any = {
+      const updates: UserUpdate = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
@@ -257,7 +281,11 @@ const UserEdit: React.FC = () => {
                     <Label htmlFor="role">Role *</Label>
                     <Select
                       value={formData.role}
-                      onValueChange={(value) => setFormData({ ...formData, role: value as any })}
+                      onValueChange={(value) => {
+                        if ((roleOptions as readonly string[]).includes(value)) {
+                          setFormData({ ...formData, role: value as RoleOption });
+                        }
+                      }}
                     >
                       <SelectTrigger className="focus:ring-[#00bc7d]/20">
                         <SelectValue />

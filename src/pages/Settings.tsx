@@ -72,11 +72,6 @@ const Settings: React.FC = () => {
     }
   ];
 
-  const teamMembers = [
-    { id: '1', name: 'Admin User', email: 'admin@ironpulse.com', role: 'Admin', status: 'Active' },
-    { id: '2', name: 'Manager One', email: 'manager@ironpulse.com', role: 'Manager', status: 'Active' },
-    { id: '3', name: 'Staff Member', email: 'staff@ironpulse.com', role: 'Staff', status: 'Active' }
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -120,13 +115,7 @@ const Settings: React.FC = () => {
                   <CreditCard className="h-4 w-4 mr-2" />
                   Billing
                 </TabsTrigger>
-                <TabsTrigger
-                  value="team"
-                  className="flex-1 rounded-full py-2.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Team
-                </TabsTrigger>
+                
               </TabsList>
 
               <TabsContent value="general" className="space-y-6">
@@ -356,42 +345,7 @@ const Settings: React.FC = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="team" className="space-y-6">
-                <Card className="border-gray-100 shadow-lg shadow-gray-100/40 rounded-3xl">
-                  <CardHeader>
-                    <CardTitle>Team Members</CardTitle>
-                    <CardDescription>Manage staff access and roles</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {teamMembers.map(member => (
-                      <div key={member.id} className="flex items-center justify-between rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{member.name}</p>
-                          <p className="text-xs text-gray-500">{member.email}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
-                            {member.role}
-                          </Badge>
-                          <Badge className="bg-[#00bc7d]/10 text-[#00bc7d] border border-[#00bc7d]/20 text-xs">
-                            {member.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                    <Button variant="outline" className="w-full rounded-xl border-gray-200">
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Invite Team Member
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <div className="flex justify-end">
-                  <Button className="rounded-xl bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-lg shadow-[#00bc7d]/20">
-                    Save Changes
-                  </Button>
-                </div>
-              </TabsContent>
+              
             </Tabs>
           </div>
         </main>

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { UserRole } from '@/types';
+import { UserRole, Trainer } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,20 @@ import {
   FileText,
   Sparkles
 } from 'lucide-react';
+
+type SupabaseTrainerRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  specializations?: string[] | null;
+  bio?: string | null;
+  profile_image?: string | null;
+  gym_id?: string;
+  created_at: string;
+  updated_at: string;
+};
 
 const MemberCreate: React.FC = () => {
   const { hasRole } = useAuth();
@@ -51,8 +65,11 @@ const MemberCreate: React.FC = () => {
     emergencyContactRelationship: '',
     medicalConditions: '',
     fitnessGoals: '',
-    notes: ''
+    notes: '',
+    trainerId: ''
   });
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [isLoadingTrainers, setIsLoadingTrainers] = useState(false);
 
   const allowed = hasRole(UserRole.ADMIN) || hasRole(UserRole.MANAGER) || hasRole(UserRole.STAFF);
 
@@ -68,6 +85,46 @@ const MemberCreate: React.FC = () => {
         return 39.99;
     }
   };
+
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      try {
+        setIsLoadingTrainers(true);
+        const { data, error } = await supabase
+          .from('staff')
+          .select('*')
+          .eq('gym_id', DEFAULT_GYM_ID)
+          .eq('role', 'TRAINER')
+          .order('first_name');
+        if (error) {
+          console.error('Error fetching trainers:', error);
+          toast.error('Failed to load trainers');
+          return;
+        }
+        if (data) {
+          const trainerRows = data as SupabaseTrainerRow[];
+          setTrainers(trainerRows.map(t => ({
+            id: t.id,
+            firstName: t.first_name,
+            lastName: t.last_name,
+            email: t.email,
+            phone: t.phone || '',
+            specialization: t.specializations || [],
+            bio: t.bio || '',
+            profileImage: t.profile_image || '',
+            createdAt: new Date(t.created_at),
+            updatedAt: new Date(t.updated_at),
+            gymId: t.gym_id
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching trainers:', error);
+      } finally {
+        setIsLoadingTrainers(false);
+      }
+    };
+    fetchTrainers();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +152,7 @@ const MemberCreate: React.FC = () => {
           membership_type: formData.membershipType,
           plan_price: getMembershipPrice(formData.membershipType).toString(),
           status: 'ACTIVE',
+          trainer_id: formData.trainerId || null,
         });
 
       if (error) {
@@ -363,6 +421,41 @@ const MemberCreate: React.FC = () => {
                                 </SelectContent>
                               </Select>
                             </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+
+                    {/* Assign Trainer */}
+                    <motion.div variants={itemVariants}>
+                      <Card className="border-0 shadow-lg shadow-gray-100/50 bg-white overflow-hidden rounded-2xl">
+                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 pb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="p-2 bg-[#00bc7d]/10 rounded-lg">
+                              <Sparkles className="h-5 w-5 text-[#00bc7d]" />
+                            </div>
+                            <CardTitle className="text-lg text-gray-900">Assign Trainer</CardTitle>
+                          </div>
+                          <CardDescription>Choose a trainer for this member</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="trainer">Trainer</Label>
+                            <Select
+                              value={formData.trainerId}
+                              onValueChange={(value) => setFormData({ ...formData, trainerId: value })}
+                            >
+                              <SelectTrigger className="h-11 focus:ring-[#00bc7d] rounded-xl border-gray-200">
+                                <SelectValue placeholder={isLoadingTrainers ? "Loading trainers..." : "Select Trainer"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {trainers.map((trainer) => (
+                                  <SelectItem key={trainer.id} value={trainer.id}>
+                                    {trainer.firstName} {trainer.lastName} {trainer.specialization && trainer.specialization.length > 0 ? `(${trainer.specialization[0]})` : ''}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </CardContent>
                       </Card>

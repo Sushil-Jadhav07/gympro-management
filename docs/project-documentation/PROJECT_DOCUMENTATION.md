@@ -1,4 +1,4 @@
-# GymPro / GAMA Dashboard — Project Documentation (Simple Words)
+# GymPro / GAMA Dashboard ï¿½ Project Documentation (Simple Words)
 
 This document explains the whole project in simple words. It covers what the app does, the main pages, the data flow, and where to find key files.
 
@@ -6,7 +6,7 @@ This document explains the whole project in simple words. It covers what the app
 
 ## 1) What this project is
 
-GymPro (also called GAMA — Gym Admin Management By Asynk) is a web dashboard for gym owners and staff. It helps manage members, classes, staff, payments, analytics, and system users. The UI is modern and animated, and data is stored in Supabase.
+GymPro (also called GAMA ï¿½ Gym Admin Management By Asynk) is a web dashboard for gym owners and staff. It helps manage members, classes, staff, payments, analytics, and system users. The UI is modern and animated, and data is stored in Supabase.
 
 ---
 
@@ -24,8 +24,8 @@ GymPro (also called GAMA — Gym Admin Management By Asynk) is a web dashboard for
 ## 3) How the app starts
 
 Entry and root files:
-- `src/main.tsx` — app entry point
-- `src/App.tsx` — wraps providers + routes
+- `src/main.tsx` ï¿½ app entry point
+- `src/App.tsx` ï¿½ wraps providers + routes
 
 Global providers:
 - QueryClientProvider (React Query)
@@ -57,6 +57,7 @@ Protected pages (require login):
 - `/staff/:id/edit` ? Edit staff
 - `/payments/new` ? Create payment
 - `/promocodes/new` ? Create promo code
+- `/settings` ? Application settings
 
 Default redirect:
 - `/` ? goes to `/dashboard` if logged in, else `/login`
@@ -98,14 +99,12 @@ File: `src/pages/Dashboard.tsx`
 - Tabs show different features based on user role.
 
 Tabs:
-- `overview` — dashboard summary cards
-- `members` — member management
-- `classes` — class booking
-- `staff` — staff management
-- `payments` — payment system
-- `analytics` — analytics dashboard
-
----
+- `overview` ï¿½ dashboard summary cards
+- `members` ï¿½ member management
+- `classes` ï¿½ class booking
+- `staff` ï¿½ staff management
+- `payments` ï¿½ payment system
+- `analytics` ï¿½ analytics dashboard
 
 ## 7) Feature modules (what each part does)
 
@@ -142,6 +141,10 @@ Tabs:
   - `src/pages/UserView.tsx`
 - Uses Supabase `users` table
 - Functions: create, edit, view, delete users
+
+### Settings
+- Page: `src/pages/Settings.tsx`
+- Functions: Configure application preferences (currently UI only)
 
 ---
 
@@ -194,14 +197,14 @@ A REST API client exists, but most features use Supabase directly. It can be use
 
 ## 12) Project structure (important folders)
 
-- `src/pages/` — all page routes
-- `src/components/` — features and layout
-- `src/components/ui/` — reusable UI
-- `src/contexts/` — global app state
-- `src/hooks/` — custom hooks
-- `src/lib/` — helpers, Supabase, auth
-- `src/types/` — TypeScript types
-- `docs/` — documentation files
+- `src/pages/` ï¿½ all page routes
+- `src/components/` ï¿½ features and layout
+- `src/components/ui/` ï¿½ reusable UI
+- `src/contexts/` ï¿½ global app state
+- `src/hooks/` ï¿½ custom hooks
+- `src/lib/` ï¿½ helpers, Supabase, auth
+- `src/types/` ï¿½ TypeScript types
+- `docs/` ï¿½ documentation files
 
 ---
 
@@ -246,6 +249,7 @@ pnpm run preview
 - Staff tab: `/dashboard?tab=staff`
 - Payments tab: `/dashboard?tab=payments`
 - Analytics tab: `/dashboard?tab=analytics`
+- Settings: `/settings`
 - User management (Admin): `/users`
 
 ---

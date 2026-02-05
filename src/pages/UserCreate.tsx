@@ -30,6 +30,9 @@ const UserCreate: React.FC = () => {
     return saved ? JSON.parse(saved) : false;
   });
 
+  const roleOptions = ['admin', 'manager', 'trainer', 'member'] as const;
+  type RoleOption = typeof roleOptions[number];
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -37,7 +40,7 @@ const UserCreate: React.FC = () => {
     phoneNumber: '',
     password: '',
     confirmPassword: '',
-    role: 'member' as 'admin' | 'manager' | 'trainer' | 'member',
+    role: 'member' as RoleOption,
     isActive: true
   });
 
@@ -224,7 +227,11 @@ const UserCreate: React.FC = () => {
                         <Label htmlFor="role">Role *</Label>
                         <Select
                           value={formData.role}
-                          onValueChange={(value) => setFormData({ ...formData, role: value as any })}
+                          onValueChange={(value) => {
+                            if ((roleOptions as readonly string[]).includes(value)) {
+                              setFormData({ ...formData, role: value as RoleOption });
+                            }
+                          }}
                         >
                           <SelectTrigger className="focus:ring-[#00bc7d]/20 rounded-xl border-gray-200 h-11">
                             <SelectValue />

@@ -23,6 +23,7 @@ import Topbar from '@/components/layout/Topbar';
 import MemberManagement from '@/components/members/MemberManagement';
 import ClassBooking from '@/components/classes/ClassBooking';
 import StaffManagement from '@/components/staff/StaffManagement';
+import TrainerManagement from '@/components/trainers/TrainerManagement';
 import PaymentSystem from '@/components/payments/PaymentSystem';
 import AnalyticsDashboard from '@/components/analytics/AnalyticsDashboard';
 
@@ -347,6 +348,18 @@ const Dashboard: React.FC = () => {
                 transition={{ duration: 0.3 }}
               >
                 <MemberManagement />
+              </motion.div>
+            )}
+
+            {activeTab === 'trainers' && (
+              <motion.div
+                key="trainers"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <TrainerManagement />
               </motion.div>
             )}
 

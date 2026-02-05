@@ -38,6 +38,66 @@ import PaymentStatusComponent from './PaymentStatus';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import PageLoader from '../ui/PageLoader';
+import { generateInvoicePdf } from '@/lib/invoicePdf';
+
+type PaymentRow = {
+  id: string;
+  member_id: string;
+  amount: number | string;
+  currency: string;
+  type: PaymentType;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  description: string;
+  transaction_id?: string | null;
+  invoice_id?: string | null;
+  paid_date?: string | null;
+  due_date: string;
+  refunded_date?: string | null;
+  refund_amount?: number | string | null;
+};
+
+type PromoRow = {
+  id: string;
+  code: string;
+  description: string;
+  type: 'percentage' | 'fixed';
+  value: number | string;
+  valid_from: string;
+  valid_to: string;
+  usage_limit?: number | null;
+  used_count?: number | null;
+  is_active: boolean;
+  applicable_services?: string[] | null;
+};
+
+type InvoiceRow = {
+  id: string;
+  member_id: string;
+  amount: number | string;
+  currency: string;
+  description: string;
+  issue_date: string;
+  due_date: string;
+  paid_date?: string | null;
+  status: string;
+  items?: unknown[] | null;
+  invoice_number?: string | null;
+  gstin?: string | null;
+  business_name?: string | null;
+  billing_address?: string | null;
+  hsn_sac?: string | null;
+  cgst_rate?: number | null;
+  sgst_rate?: number | null;
+  cgst_amount?: number | null;
+  sgst_amount?: number | null;
+  subtotal?: number | null;
+  total?: number | null;
+  customer_name?: string | null;
+  customer_email?: string | null;
+  logo_url?: string | null;
+  pdf_url?: string | null;
+};
 
 const PaymentSystem: React.FC = () => {
   const navigate = useNavigate();
@@ -64,10 +124,10 @@ const PaymentSystem: React.FC = () => {
 
         if (paymentsError) throw paymentsError;
 
-        const mappedPayments: Payment[] = (paymentsData || []).map((p: any) => ({
+        const mappedPayments: Payment[] = ((paymentsData ?? []) as PaymentRow[]).map((p) => ({
           id: p.id,
           memberId: p.member_id,
-          amount: parseFloat(p.amount),
+          amount: Number(p.amount),
           currency: p.currency,
           type: p.type as PaymentType,
           method: p.method as PaymentMethod,
@@ -78,7 +138,7 @@ const PaymentSystem: React.FC = () => {
           paidDate: p.paid_date ? new Date(p.paid_date) : undefined,
           dueDate: new Date(p.due_date),
           refundedDate: p.refunded_date ? new Date(p.refunded_date) : undefined,
-          refundAmount: p.refund_amount ? parseFloat(p.refund_amount) : undefined
+          refundAmount: p.refund_amount ? Number(p.refund_amount) : undefined
         }));
 
         setPayments(mappedPayments);
@@ -91,12 +151,12 @@ const PaymentSystem: React.FC = () => {
 
         if (promoError) throw promoError;
 
-        const mappedPromoCodes: PromoCode[] = (promoData || []).map((p: any) => ({
+        const mappedPromoCodes: PromoCode[] = ((promoData ?? []) as PromoRow[]).map((p) => ({
           id: p.id,
           code: p.code,
           description: p.description,
           type: p.type as 'percentage' | 'fixed',
-          value: parseFloat(p.value),
+          value: Number(p.value),
           validFrom: new Date(p.valid_from),
           validTo: new Date(p.valid_to),
           usageLimit: p.usage_limit,
@@ -115,17 +175,32 @@ const PaymentSystem: React.FC = () => {
           .order('issue_date', { ascending: false });
 
         if (!invoicesError && invoicesData) {
-          const mappedInvoices: Invoice[] = invoicesData.map((i: any) => ({
+          const mappedInvoices: Invoice[] = (invoicesData as InvoiceRow[]).map((i) => ({
             id: i.id,
             memberId: i.member_id,
-            amount: parseFloat(i.amount),
+            amount: Number(i.amount),
             currency: i.currency,
             description: i.description,
             issueDate: new Date(i.issue_date),
             dueDate: new Date(i.due_date),
             paidDate: i.paid_date ? new Date(i.paid_date) : undefined,
             status: i.status,
-            items: i.items || []
+            items: (i.items as Invoice['items']) || [],
+            invoiceNumber: i.invoice_number || undefined,
+            gstin: i.gstin || undefined,
+            businessName: i.business_name || undefined,
+            billingAddress: i.billing_address || undefined,
+            hsnSac: i.hsn_sac || undefined,
+            cgstRate: i.cgst_rate ?? undefined,
+            sgstRate: i.sgst_rate ?? undefined,
+            cgstAmount: i.cgst_amount ?? undefined,
+            sgstAmount: i.sgst_amount ?? undefined,
+            subtotal: i.subtotal ?? undefined,
+            total: i.total ?? undefined,
+            customerName: i.customer_name || undefined,
+            customerEmail: i.customer_email || undefined,
+            logoUrl: i.logo_url || undefined,
+            pdfUrl: i.pdf_url || undefined
           }));
           setInvoices(mappedInvoices);
         }
@@ -227,6 +302,15 @@ const PaymentSystem: React.FC = () => {
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
+  };
+
+  const handleDownloadInvoice = async (invoice: Invoice) => {
+    try {
+      await generateInvoicePdf(invoice);
+    } catch (error) {
+      console.error('Failed to generate invoice PDF', error);
+      toast.error('Failed to generate invoice PDF');
+    }
   };
 
   return (
@@ -505,7 +589,12 @@ const PaymentSystem: React.FC = () => {
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-[#00bc7d]/10 hover:text-[#00bc7d]">
                                 <Send className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-[#00bc7d]/10 hover:text-[#00bc7d]">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-lg hover:bg-[#00bc7d]/10 hover:text-[#00bc7d]"
+                                onClick={() => handleDownloadInvoice(invoice)}
+                              >
                                 <Download className="h-4 w-4" />
                               </Button>
                             </div>

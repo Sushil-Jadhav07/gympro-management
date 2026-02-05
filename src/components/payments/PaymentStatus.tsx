@@ -25,6 +25,29 @@ import {
 
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { createInvoiceForPayment } from '@/lib/invoices';
+
+type PaymentRow = {
+  id: string;
+  member_id: string;
+  amount: number | string;
+  status: PaymentStatusType;
+  paid_date?: string | null;
+  due_date: string;
+  method: string;
+  description: string;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+type MemberRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  membership_type?: string | null;
+  status?: string | null;
+};
 
 const PaymentStatus: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -47,10 +70,10 @@ const PaymentStatus: React.FC = () => {
 
         if (paymentsError) throw paymentsError;
 
-        const mappedPayments: Payment[] = (paymentsData || []).map((p: any) => ({
+        const mappedPayments: Payment[] = ((paymentsData ?? []) as PaymentRow[]).map((p) => ({
           id: p.id,
           memberId: p.member_id,
-          amount: parseFloat(p.amount),
+          amount: Number(p.amount),
           status: p.status as PaymentStatusType,
           paymentDate: p.paid_date ? new Date(p.paid_date) : undefined,
           dueDate: new Date(p.due_date),
@@ -69,7 +92,7 @@ const PaymentStatus: React.FC = () => {
 
         if (membersError) throw membersError;
 
-        const mappedMembers: Member[] = (membersData || []).map((m: any) => ({
+        const mappedMembers: Member[] = ((membersData ?? []) as MemberRow[]).map((m) => ({
           id: m.id,
           firstName: m.first_name,
           lastName: m.last_name,
@@ -155,17 +178,41 @@ const PaymentStatus: React.FC = () => {
       .reduce((sum, p) => sum + p.amount, 0)
   };
 
-  const processPayment = (paymentId: string) => {
-    setPayments(prev => prev.map(payment =>
-      payment.id === paymentId
-        ? {
-          ...payment,
+  const processPayment = async (paymentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .update({
           status: PaymentStatusType.COMPLETED,
-          paymentDate: new Date(),
-          updatedAt: new Date()
-        }
-        : payment
-    ));
+          paid_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw error;
+      }
+
+      await createInvoiceForPayment(paymentId);
+
+      setPayments(prev => prev.map(payment =>
+        payment.id === paymentId
+          ? {
+            ...payment,
+            status: PaymentStatusType.COMPLETED,
+            paymentDate: new Date(),
+            updatedAt: new Date()
+          }
+          : payment
+      ));
+
+      toast.success('Payment completed and invoice generated');
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast.error('Failed to process payment');
+    }
   };
 
   return (

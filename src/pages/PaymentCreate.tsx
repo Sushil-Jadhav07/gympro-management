@@ -12,6 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
+import { supabase } from '@/lib/supabase';
+import { createInvoiceForPayment } from '@/lib/invoices';
 import {
   ArrowLeft,
   CreditCard,
@@ -56,21 +58,38 @@ const PaymentCreate: React.FC = () => {
     visible: { opacity: 1, y: 0 }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Simulate API call
-    toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1500)),
-      {
-        loading: 'Processing payment...',
-        success: () => {
-          navigate('/dashboard?tab=payments');
-          return 'Payment processed successfully!';
-        },
-        error: 'Failed to process payment'
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .insert({
+          member_id: formData.memberId,
+          amount: Number(formData.amount || 0),
+          currency: 'INR',
+          type: formData.type,
+          method: formData.method,
+          status: PaymentStatus.COMPLETED,
+          description: formData.description,
+          paid_date: new Date().toISOString(),
+          due_date: new Date().toISOString()
+        })
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw error;
       }
-    );
+
+      await createInvoiceForPayment(data.id);
+
+      toast.success('Payment processed and invoice generated');
+      navigate('/dashboard?tab=payments');
+    } catch (error) {
+      console.error('Failed to process payment', error);
+      toast.error('Failed to process payment');
+    }
   };
 
   return (

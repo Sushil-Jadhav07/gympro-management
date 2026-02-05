@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Bell, User, ChevronDown, X, LogOut, Menu, Settings, Calendar } from 'lucide-react';
+import { Search, Bell, User, ChevronDown, X, LogOut, Menu, Settings, Calendar, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +48,11 @@ const Topbar: React.FC<TopbarProps> = ({ isSidebarCollapsed, onToggleSidebar }) 
             onClick={onToggleSidebar}
             className="h-9 w-9 rounded-full border border-border/40 bg-background/60 hover:bg-[#00bc7d] flex items-center justify-center"
           >
-            <Menu className="h-5 w-5" />
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="h-5 w-5" />
+            ) : (
+              <PanelLeftClose className="h-5 w-5" />
+            )}
           </Button>
         )}
         <div className="relative flex-1 max-w-md">

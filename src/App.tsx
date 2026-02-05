@@ -18,6 +18,7 @@ import MemberEdit from './pages/MemberEdit';
 import ClassCreate from './pages/ClassCreate';
 import StaffCreate from './pages/StaffCreate';
 import StaffEdit from './pages/StaffEdit';
+import TrainerView from './pages/TrainerView';
 import PaymentCreate from './pages/PaymentCreate';
 import PromoCodeCreate from './pages/PromoCodeCreate';
 import StaffView from './pages/StaffView';
@@ -157,6 +158,16 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      {/* TrainerCreate route removed */}
+      <Route
+        path="/trainers/:id"
+        element={
+          <ProtectedRoute>
+            <TrainerView />
+          </ProtectedRoute>
+        }
+      />
+      {/* TrainerEdit route removed */}
       <Route
         path="/payments/new"
         element={
@@ -190,7 +201,12 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <AuthProvider>
           <AppRoutes />
         </AuthProvider>
