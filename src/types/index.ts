@@ -56,6 +56,7 @@ export interface Staff extends User {
   specializations?: string[];
   bio?: string;
   profileImage?: string;
+  yearsExperience?: number;
 }
 
 // Trainer interface

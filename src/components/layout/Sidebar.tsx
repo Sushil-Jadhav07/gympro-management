@@ -8,7 +8,6 @@ import {
   UserCheck,
   CreditCard,
   BarChart3,
-  Dumbbell,
   LogOut,
   Settings,
   ChevronLeft,
@@ -62,7 +61,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
   const navItems: NavItem[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/dashboard' },
     { id: 'members', label: 'Members', icon: Users, path: '/dashboard', roles: [UserRole.STAFF, UserRole.MANAGER, UserRole.ADMIN] },
-    { id: 'trainers', label: 'Trainers', icon: Dumbbell, path: '/dashboard' },
     { id: 'classes', label: 'Classes', icon: Calendar, path: '/dashboard' },
     { id: 'staff', label: 'Staff', icon: UserCheck, path: '/dashboard', roles: [UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'payments', label: 'Payments', icon: CreditCard, path: '/dashboard', roles: [UserRole.STAFF, UserRole.MANAGER, UserRole.ADMIN] },

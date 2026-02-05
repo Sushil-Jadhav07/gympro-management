@@ -41,6 +41,7 @@ type DbStaff = {
   hire_date?: string | null;
   certifications?: string[] | null;
   specializations?: string[] | null;
+  years_experience?: string | number | null;
 };
 
 const mapSupabaseStaffToStaff = (dbStaff: DbStaff): Staff => {
@@ -59,6 +60,7 @@ const mapSupabaseStaffToStaff = (dbStaff: DbStaff): Staff => {
     schedule: [],
     certifications: dbStaff.certifications || [],
     specializations: dbStaff.specializations || [],
+    yearsExperience: dbStaff.years_experience ? parseFloat(String(dbStaff.years_experience)) : 0,
     createdAt: new Date(dbStaff.created_at),
     updatedAt: new Date(dbStaff.updated_at)
   };
@@ -105,7 +107,8 @@ const StaffEdit: React.FC = () => {
     salary: '',
     role: UserRole.STAFF as UserRole,
     bio: '',
-    specializations: ''
+    specializations: '',
+    yearsExperience: ''
   });
 
   useEffect(() => {
@@ -120,7 +123,8 @@ const StaffEdit: React.FC = () => {
         salary: staff.salary.toString(),
         role: staff.role,
         bio: staff.bio || '',
-        specializations: staff.specializations ? staff.specializations.join(', ') : ''
+        specializations: staff.specializations ? staff.specializations.join(', ') : '',
+        yearsExperience: String(staff.yearsExperience ?? '')
       });
     }
   }, [staff]);
@@ -161,6 +165,7 @@ const StaffEdit: React.FC = () => {
           role: formData.role, // Remove unnecessary toUpperCase if it's already enum
           bio: formData.bio || null,
           specializations: specializationsArray,
+          years_experience: formData.yearsExperience ? parseFloat(formData.yearsExperience) : 0,
           updated_at: new Date().toISOString()
         })
         .eq('id', staff?.id);
@@ -393,6 +398,19 @@ const StaffEdit: React.FC = () => {
                           </div>
 
                           <div className="space-y-2">
+                        <Label htmlFor="yearsExperience">Years of Experience</Label>
+                        <Input
+                          id="yearsExperience"
+                          type="number"
+                          placeholder="e.g. 3"
+                          value={formData.yearsExperience}
+                          onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
+                          className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                        />
+                        <p className="text-xs text-muted-foreground">Specify total professional experience</p>
+                      </div>
+
+                      <div className="space-y-2">
                             <Label htmlFor="bio">Professional Bio</Label>
                             <Textarea 
                               id="bio" 

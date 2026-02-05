@@ -117,7 +117,7 @@ const TrainerView: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Trainer Not Found</h2>
-          <Button onClick={() => navigate('/dashboard?tab=trainers')} variant="outline">
+          <Button onClick={() => navigate('/dashboard?tab=staff')} variant="outline">
             Return to Trainer List
           </Button>
         </div>
@@ -176,7 +176,7 @@ const TrainerView: React.FC = () => {
               >
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/dashboard?tab=trainers')}
+                  onClick={() => navigate('/dashboard?tab=staff')}
                   className="group hover:border-[#00bc7d] hover:text-[#00bc7d] hover:bg-[#00bc7d]/5 rounded-xl border-gray-200"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />

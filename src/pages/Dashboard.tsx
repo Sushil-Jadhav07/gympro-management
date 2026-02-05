@@ -23,7 +23,6 @@ import Topbar from '@/components/layout/Topbar';
 import MemberManagement from '@/components/members/MemberManagement';
 import ClassBooking from '@/components/classes/ClassBooking';
 import StaffManagement from '@/components/staff/StaffManagement';
-import TrainerManagement from '@/components/trainers/TrainerManagement';
 import PaymentSystem from '@/components/payments/PaymentSystem';
 import AnalyticsDashboard from '@/components/analytics/AnalyticsDashboard';
 
@@ -105,7 +104,8 @@ const StatCard: React.FC<{
 const Dashboard: React.FC = () => {
   const { user, hasRole } = useAuth();
   const [searchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'overview';
+  const urlTab = searchParams.get('tab') || 'overview';
+  const activeTab = urlTab === 'trainers' ? 'staff' : urlTab;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
@@ -351,17 +351,7 @@ const Dashboard: React.FC = () => {
               </motion.div>
             )}
 
-            {activeTab === 'trainers' && (
-              <motion.div
-                key="trainers"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TrainerManagement />
-              </motion.div>
-            )}
+            
 
             {activeTab === 'classes' && (
               <motion.div

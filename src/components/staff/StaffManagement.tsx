@@ -42,6 +42,7 @@ type SupabaseStaffRow = {
   salary?: string | number | null;
   certifications?: string[] | null;
   specializations?: string[] | null;
+  years_experience?: string | number | null;
 };
 const StaffManagement: React.FC = () => {
   const navigate = useNavigate();
@@ -69,7 +70,8 @@ const StaffManagement: React.FC = () => {
       salary: dbStaff.salary ? parseFloat(String(dbStaff.salary)) : 0,
       schedule: [], // Schedule not stored in staff table
       certifications: dbStaff.certifications || [],
-      specializations: dbStaff.specializations || []
+      specializations: dbStaff.specializations || [],
+      yearsExperience: dbStaff.years_experience ? parseFloat(String(dbStaff.years_experience)) : 0
     };
   };
 
@@ -142,12 +144,12 @@ const StaffManagement: React.FC = () => {
   const calculateTenure = (hireDate: Date) => {
     const today = new Date();
     const years = today.getFullYear() - hireDate.getFullYear();
-    const monthDiff = today.getMonth() - hireDate.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < hireDate.getDate())) {
-      return years - 1;
+    const months = today.getMonth() - hireDate.getMonth() + (today.getDate() < hireDate.getDate() ? -1 : 0);
+    const normalizedMonths = (months + 12) % 12;
+    if (years <= 0 && normalizedMonths > 0) {
+      return `${normalizedMonths} mos`;
     }
-    return years;
+    return `${Math.max(0, years)} yrs`;
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -305,6 +307,7 @@ const StaffManagement: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredStaff.map((staffMember, index) => {
                 const tenureYears = calculateTenure(staffMember.hireDate);
+                const experienceLabel = `${Math.max(0, staffMember.yearsExperience || 0)} yrs`;
                 const salaryLabel = staffMember.salary ? `$${staffMember.salary.toLocaleString()}` : 'N/A';
 
                 return (
@@ -364,14 +367,23 @@ const StaffManagement: React.FC = () => {
                         {staffMember.department}
                       </Badge>
                     </div>
+                    {staffMember.specializations && staffMember.specializations.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {staffMember.specializations.map((spec, i) => (
+                          <Badge key={i} className="bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20 border px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                            {spec}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3">
                         <div className="flex items-center gap-2 text-gray-900 font-semibold">
                           <Clock className="h-4 w-4 text-[#00bc7d]" />
-                          {tenureYears} yrs
+                          {experienceLabel}
                         </div>
-                        <p className="text-xs text-gray-500">Tenure</p>
+                        <p className="text-xs text-gray-500">Experience</p>
                       </div>
                       <div className="rounded-2xl bg-gray-50 border border-gray-100 p-3">
                         <div className="flex items-center gap-2 text-gray-900 font-semibold">

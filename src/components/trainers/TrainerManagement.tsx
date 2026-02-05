@@ -331,14 +331,14 @@ const TrainerManagement: React.FC = () => {
                     <Button
                       variant="outline"
                       className="flex-1 rounded-xl h-11 border-gray-200 text-gray-700 hover:border-[#00bc7d] hover:text-[#00bc7d] hover:bg-[#00bc7d]/5"
-                      onClick={() => navigate(`/trainers/${trainer.id}`)}
+                      onClick={() => navigate(`/staff/${trainer.id}`)}
                     >
                       <Calendar className="h-4 w-4 mr-2" />
                       Schedule
                     </Button>
                     <Button
                       className="flex-1 rounded-xl h-11 bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-lg shadow-[#00bc7d]/20"
-                      onClick={() => navigate(`/trainers/${trainer.id}`)}
+                      onClick={() => navigate(`/staff/${trainer.id}`)}
                     >
                       View Profile
                     </Button>

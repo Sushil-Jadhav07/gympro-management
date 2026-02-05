@@ -44,7 +44,8 @@ const StaffCreate: React.FC = () => {
     salary: '',
     role: UserRole.STAFF,
     bio: '',
-    specializations: ''
+    specializations: '',
+    yearsExperience: ''
   });
 
   const containerVariants = {
@@ -89,7 +90,8 @@ const StaffCreate: React.FC = () => {
           hire_date: new Date().toISOString().split('T')[0],
           certifications: [],
           specializations: specializationsArray,
-          bio: formData.bio || null
+          bio: formData.bio || null,
+          years_experience: formData.yearsExperience ? parseFloat(formData.yearsExperience) : 0
         });
 
       if (error) {
@@ -298,6 +300,19 @@ const StaffCreate: React.FC = () => {
                               className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
                             />
                             <p className="text-xs text-muted-foreground">Separate multiple specializations with commas</p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="yearsExperience">Years of Experience</Label>
+                            <Input
+                              id="yearsExperience"
+                              type="number"
+                              placeholder="e.g. 3"
+                              value={formData.yearsExperience}
+                              onChange={(e) => setFormData({ ...formData, yearsExperience: e.target.value })}
+                              className="h-11 focus-visible:ring-[#00bc7d] rounded-xl border-gray-200"
+                            />
+                            <p className="text-xs text-muted-foreground">Specify total professional experience</p>
                           </div>
 
                           <div className="space-y-2">
