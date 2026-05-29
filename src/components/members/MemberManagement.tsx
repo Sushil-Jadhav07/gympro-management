@@ -77,6 +77,7 @@ const MemberManagement: React.FC = () => {
     weight?: string | null;
     height?: string | null;
     membership_type: 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit';
+    plan_price?: string | number | null;
     status: 'ACTIVE' | 'INACTIVE';
     created_at: string;
     updated_at: string;
@@ -111,6 +112,7 @@ const MemberManagement: React.FC = () => {
       heightFeet,
       heightInches,
       membershipType: dbMember.membership_type as 'Gym' | 'Gym + Cardio' | 'Gym + Cardio + Crossfit',
+      planPrice: dbMember.plan_price ? Number(dbMember.plan_price) : undefined,
       membershipStartDate: new Date(),
       membershipEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
       isActive: dbMember.status === 'ACTIVE',
@@ -173,13 +175,13 @@ const MemberManagement: React.FC = () => {
   const getMembershipPrice = (membership: string) => {
     switch (membership) {
       case 'Gym':
-        return 39.99;
+        return 999;
       case 'Gym + Cardio':
-        return 59.99;
+        return 1999;
       case 'Gym + Cardio + Crossfit':
-        return 89.99;
+        return 3499;
       default:
-        return 39.99;
+        return 999;
     }
   };
 
@@ -1317,7 +1319,7 @@ const MemberManagement: React.FC = () => {
                           {member.membershipType}
                         </Badge>
                         <span className="text-xs text-gray-500 font-medium ml-1">
-                          ₹{getMembershipPrice(member.membershipType)}/mo
+                          ₹{member.planPrice ?? getMembershipPrice(member.membershipType)}/mo
                         </span>
                       </div>
                     </TableCell>
@@ -1326,9 +1328,6 @@ const MemberManagement: React.FC = () => {
                         <div className="text-gray-900 font-medium flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 text-gray-400" />
                           {member.membershipStartDate.toLocaleDateString()}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {calculateAge(member.dateOfBirth)} years old
                         </div>
                       </div>
                     </TableCell>
