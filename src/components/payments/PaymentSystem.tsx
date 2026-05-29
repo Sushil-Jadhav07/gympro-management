@@ -106,7 +106,7 @@ const PaymentSystem: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | PaymentStatus>('all');
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -147,7 +147,7 @@ const PaymentSystem: React.FC = () => {
         const { data: promoData, error: promoError } = await supabase
           .from('promo_codes')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('valid_from', { ascending: false });
 
         if (promoError) throw promoError;
 
@@ -184,7 +184,7 @@ const PaymentSystem: React.FC = () => {
             issueDate: new Date(i.issue_date),
             dueDate: new Date(i.due_date),
             paidDate: i.paid_date ? new Date(i.paid_date) : undefined,
-            status: i.status,
+            status: (i.status?.toLowerCase() ?? 'draft') as Invoice['status'],
             items: (i.items as Invoice['items']) || [],
             invoiceNumber: i.invoice_number || undefined,
             gstin: i.gstin || undefined,
@@ -577,8 +577,8 @@ const PaymentSystem: React.FC = () => {
                           <TableCell className="text-gray-500">{invoice.issueDate.toLocaleDateString()}</TableCell>
                           <TableCell className="text-gray-500">{invoice.dueDate.toLocaleDateString()}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`rounded-lg px-2 py-0.5 font-normal ${invoice.status === 'PAID' ? 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20' :
-                              invoice.status === 'OVERDUE' ? 'bg-red-50 text-red-600 border-red-200' :
+                            <Badge variant="outline" className={`rounded-lg px-2 py-0.5 font-normal ${invoice.status === 'paid' ? 'bg-[#00bc7d]/10 text-[#00bc7d] border-[#00bc7d]/20' :
+                              invoice.status === 'overdue' ? 'bg-red-50 text-red-600 border-red-200' :
                                 'bg-yellow-50 text-yellow-600 border-yellow-200'
                               }`}>
                               {invoice.status}
