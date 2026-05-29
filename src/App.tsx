@@ -19,6 +19,8 @@ import ClassCreate from './pages/ClassCreate';
 import StaffCreate from './pages/StaffCreate';
 import StaffEdit from './pages/StaffEdit';
 import TrainerView from './pages/TrainerView';
+import TrainerManagement from './pages/TrainerManagement';
+import TrainerCreate from './pages/TrainerCreate';
 import PaymentCreate from './pages/PaymentCreate';
 import PromoCodeCreate from './pages/PromoCodeCreate';
 import StaffView from './pages/StaffView';
@@ -99,6 +101,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <UserEdit />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trainers"
+        element={
+          <ProtectedRoute>
+            <TrainerManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/trainers/new"
+        element={
+          <ProtectedRoute>
+            <TrainerCreate />
           </ProtectedRoute>
         }
       />
