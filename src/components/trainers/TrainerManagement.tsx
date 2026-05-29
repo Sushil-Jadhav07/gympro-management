@@ -261,6 +261,7 @@ const TrainerManagement: React.FC = () => {
                             size="icon"
                             className="h-9 w-9 rounded-xl text-gray-500 hover:bg-[#00bc7d]/10 hover:text-[#00bc7d] transition-all"
                             title="Edit Trainer"
+                              onClick={() => navigate(`/trainers/${trainer.id}/edit`)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -298,6 +299,7 @@ const TrainerManagement: React.FC = () => {
                       Schedule
                     </Button>
                     <Button
+                      onClick={() => navigate(`/trainers/${trainer.id}`)}
                       className="flex-1 rounded-xl h-11 bg-[#00bc7d] hover:bg-[#00bc7d]/90 text-white shadow-lg shadow-[#00bc7d]/20"
                     >
                       View Profile

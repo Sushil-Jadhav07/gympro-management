@@ -21,6 +21,7 @@ import StaffEdit from './pages/StaffEdit';
 import TrainerView from './pages/TrainerView';
 import TrainerManagement from './pages/TrainerManagement';
 import TrainerCreate from './pages/TrainerCreate';
+import TrainerEdit from './pages/TrainerEdit';
 import PaymentCreate from './pages/PaymentCreate';
 import PromoCodeCreate from './pages/PromoCodeCreate';
 import StaffView from './pages/StaffView';
@@ -185,7 +186,14 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      {/* TrainerEdit route removed */}
+      <Route
+        path="/trainers/:id/edit"
+        element={
+          <ProtectedRoute>
+            <TrainerEdit />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/payments/new"
         element={

@@ -452,19 +452,19 @@ const MemberManagement: React.FC = () => {
                       <SelectItem value="Gym" className="focus:bg-[#00bc7d]/10 focus:text-[#00bc7d]">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Gym Only</span>
-                          <Badge variant="outline" className="ml-auto border-[#00bc7d]/20 text-[#00bc7d] bg-[#00bc7d]/5">$39.99</Badge>
+                          <Badge variant="outline" className="ml-auto border-[#00bc7d]/20 text-[#00bc7d] bg-[#00bc7d]/5">₹39.99</Badge>
                         </div>
                       </SelectItem>
                       <SelectItem value="Gym + Cardio" className="focus:bg-[#00bc7d]/10 focus:text-[#00bc7d]">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Gym + Cardio</span>
-                          <Badge variant="outline" className="ml-auto border-teal-200 text-teal-700 bg-teal-50">$59.99</Badge>
+                          <Badge variant="outline" className="ml-auto border-teal-200 text-teal-700 bg-teal-50">₹59.99</Badge>
                         </div>
                       </SelectItem>
                       <SelectItem value="Gym + Cardio + Crossfit" className="focus:bg-[#00bc7d]/10 focus:text-[#00bc7d]">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">Full Package</span>
-                          <Badge variant="outline" className="ml-auto border-emerald-200 text-emerald-700 bg-emerald-50">$89.99</Badge>
+                          <Badge variant="outline" className="ml-auto border-emerald-200 text-emerald-700 bg-emerald-50">₹89.99</Badge>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -791,7 +791,7 @@ const MemberManagement: React.FC = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Monthly Fee</span>
-                <span className="font-bold text-lg">${getMembershipPrice(member.membershipType)}</span>
+                <span className="font-bold text-lg">₹{getMembershipPrice(member.membershipType)}</span>
               </div>
             </div>
 
@@ -1317,7 +1317,7 @@ const MemberManagement: React.FC = () => {
                           {member.membershipType}
                         </Badge>
                         <span className="text-xs text-gray-500 font-medium ml-1">
-                          ${getMembershipPrice(member.membershipType)}/mo
+                          ₹{getMembershipPrice(member.membershipType)}/mo
                         </span>
                       </div>
                     </TableCell>

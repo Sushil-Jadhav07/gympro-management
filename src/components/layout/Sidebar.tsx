@@ -6,7 +6,6 @@ import {
   Users,
   Calendar,
   UserCheck,
-  CreditCard,
   BarChart3,
   LogOut,
   Settings,
@@ -65,7 +64,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed: externalCollapsed, onTog
     { id: 'classes', label: 'Classes', icon: Calendar, path: '/dashboard' },
     { id: 'staff', label: 'Staff', icon: UserCheck, path: '/dashboard', roles: [UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'trainers', label: 'Trainers', icon: Dumbbell, path: '/trainers', roles: [UserRole.MANAGER, UserRole.ADMIN] },
-    { id: 'payments', label: 'Payments', icon: CreditCard, path: '/dashboard', roles: [UserRole.STAFF, UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/dashboard', roles: [UserRole.MANAGER, UserRole.ADMIN] },
     { id: 'users', label: 'Users', icon: Users, path: '/users', roles: [UserRole.ADMIN] },
   ];

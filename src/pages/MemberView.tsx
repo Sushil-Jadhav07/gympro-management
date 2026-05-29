@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { Member, UserRole } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
@@ -26,7 +26,6 @@ import {
   MapPin,
   Ruler,
   Scale,
-  Download,
   Receipt
 } from 'lucide-react';
 
@@ -98,7 +97,7 @@ const MemberView: React.FC = () => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved ? JSON.parse(saved) : false;
   });
-  const logoRef = useRef<HTMLImageElement>(null);
+
 
   const handleDownloadReceipt = async () => {
     if (!member) return;
@@ -209,7 +208,6 @@ const MemberView: React.FC = () => {
       });
 
       // Footer
-      const finalY = (doc as any).lastAutoTable.finalY + 30;
       doc.setFillColor(0, 188, 125);
       doc.rect(0, pageHeight - 40, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
@@ -507,7 +505,7 @@ const MemberView: React.FC = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Monthly Fee</span>
                           <span className="text-xl font-bold text-[#00bc7d]">
-                            ${getMembershipPrice(member.membershipType)}
+                            ₹{getMembershipPrice(member.membershipType)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-[#00bc7d]/10">
